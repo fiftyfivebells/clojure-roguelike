@@ -1,0 +1,10 @@
+{:paths ["src"]
+
+ :deps
+ {org.clojure/clojure               {:mvn/version "1.12.0"}
+  clojure-lanterna/clojure-lanterna {:mvn/version "0.9.7"}}
+
+ :aliases
+ {:dev {:extra-paths ["dev"]}
+
+  :run {:main-opts ["-m" "roguelike.core"]}}}

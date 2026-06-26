@@ -1,0 +1,37 @@
+# Clojure
+.clj-kondo/
+.cpcache/
+.lsp/
+.nrepl-port
+target/
+pom.xml
+pom.xml.asc
+
+# Leiningen
+.lein-deps-sum
+.lein-repl-history
+.lein-plugins/
+.lein-failures
+checkouts/
+
+# deps.edn / tools
+.mvn/
+.clojure/
+
+# Editors
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+\#*\#
+.\#*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Compiled output
+classes/
+*.class
+*.jar
