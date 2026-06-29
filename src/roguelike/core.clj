@@ -3,7 +3,19 @@
             [roguelike.world :as world]
             [roguelike.render :as render]
             [roguelike.update :as u])
-  (:import [com.googlecode.lanterna.terminal DefaultTerminalFactory]))
+  (:import [com.googlecode.lanterna.terminal DefaultTerminalFactory]
+           [com.googlecode.lanterna.terminal.swing SwingTerminalFontConfiguration]
+           [com.googlecode.lanterna TerminalSize]))
+
+(defn- get-new-screen
+  []
+  (-> (DefaultTerminalFactory.)
+      (.setTerminalEmulatorTitle "My Game")
+      (.setInitialTerminalSize (TerminalSize. 80 25))
+      (.setPreferTerminalEmulator true)   ; force Swing even when a TTY console is present
+      (.setTerminalEmulatorFontConfiguration
+       (SwingTerminalFontConfiguration/getDefaultOfSize 16))
+      (.createScreen)))
 
 (defn run-game
   [screen]
@@ -16,7 +28,7 @@
         (recur new-world)))))
 
 (defn -main [& args]
-  (let [screen (.createScreen (DefaultTerminalFactory.))]
+  (let [screen (get-new-screen)]
     (.startScreen screen)
     (run-game screen)
     (.stopScreen screen)))
