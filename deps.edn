@@ -1,8 +1,8 @@
 {:paths ["src"]
 
  :deps
- {org.clojure/clojure               {:mvn/version "1.12.0"}
-  clojure-lanterna/clojure-lanterna {:mvn/version "0.9.7"}}
+ {org.clojure/clojure              {:mvn/version "1.12.0"}
+  com.googlecode.lanterna/lanterna {:mvn/version "3.1.2"}}
 
  :aliases
  {:dev {:extra-paths ["dev"]}
