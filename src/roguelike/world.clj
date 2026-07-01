@@ -1,10 +1,13 @@
-(ns roguelike.world)
+(ns roguelike.world
+  (:require [roguelike.dungeon :as dungeon]))
 
 (defn new-world
   []
    {:player {:x 10 :y 12}
     :width 80
     :play-start-row 1
+    :current-level (dungeon/test-level)
+    :levels []
     :map-rows 22
     :msg-row 23
     :current-msg "Welcome to the dungeon."
@@ -23,22 +26,23 @@
       (assoc :current-msg message)
       (update :messages conj message)))
 
-(defn get-walking-message
-  [delta]
-  (letfn [(find-direction [{dx :x dy :y}]
-            (case [dx dy]
-              [0 -1] "north"
-              [0 1] "south"
-              [1 0] "east"
-              [-1 0] "west"))]
-    (str "You take a step " (find-direction delta) ".")))
+(defn get-tile
+  [world [x y]]
+  (let [tile (dungeon/get-tile (:current-level world) [x y])]
+    {:tile tile :x x :y y}))
+
+(defn get-proposed-coords
+  [world delta]
+  (let [[x y] delta
+        player-pos (:player world)
+        new-x (+ (:x player-pos) x)
+        new-y (+ (:y player-pos) y)
+        new-pos (clamp-position world {:x new-x :y new-y})]
+    [(:x new-pos) (:y new-pos)]))
 
 (defn move-player
-  [world delta]
-  (let [player-pos (:player world)
-        new-x (+ (:x player-pos) (:x delta))
-        new-y (+ (:y player-pos) (:y delta))
-        new-pos (clamp-position world {:x new-x :y new-y})]
+  [world [x y]]
+  (let [new-pos (clamp-position world {:x x :y y})]
     (assoc world :player new-pos)))
 
 (defn set-mode
