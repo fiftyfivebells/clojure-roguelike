@@ -1,6 +1,6 @@
 (ns roguelike.render
   (:require [roguelike.world :as world]
-            [roguelike.dungeon :as dungeon]))
+            [roguelike.level :as level]))
 
 (defn draw-message
   [tg world]
@@ -12,7 +12,7 @@
 
 (defn draw-level
   [tg level start-row]
-  (doseq [tile (dungeon/level->tile-list level)]
+  (doseq [tile (level/level->tile-list level)]
     (let [x (:x tile)
           y (:y tile)
           glyph (str (:glyph tile))]

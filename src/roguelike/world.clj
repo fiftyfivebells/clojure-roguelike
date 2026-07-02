@@ -1,12 +1,12 @@
 (ns roguelike.world
-  (:require [roguelike.dungeon :as dungeon]))
+  (:require [roguelike.level :as level]))
 
 (defn new-world
   []
    {:player {:x 10 :y 12}
     :width 80
     :play-start-row 1
-    :current-level (dungeon/test-level)
+    :current-level (level/test-level)
     :levels []
     :map-rows 22
     :msg-row 23
@@ -28,7 +28,7 @@
 
 (defn get-tile
   [world [x y]]
-  (let [tile (dungeon/get-tile (:current-level world) [x y])]
+  (let [tile (level/get-tile (:current-level world) [x y])]
     {:tile tile :x x :y y}))
 
 (defn get-proposed-coords

@@ -1,4 +1,4 @@
-(ns roguelike.dungeon)
+(ns roguelike.level)
 
 (def tile-types
   {:wall  {:type :wall         :glyph \#}
@@ -8,6 +8,9 @@
 (defn get-tile
   [level [x y]]
   (get-in level [x y]))
+
+(defn- in-bounds?
+  [dungeon])
 
 (defn is-passable?
   [tile]
