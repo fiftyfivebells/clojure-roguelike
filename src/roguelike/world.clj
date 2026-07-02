@@ -28,7 +28,7 @@
 
 (defn get-tile
   [world [x y]]
-  (let [tile (level/get-tile (:current-level world) [x y])]
+  (let [tile (level/tile-at (:current-level world) [x y])]
     {:tile tile :x x :y y}))
 
 (defn get-proposed-coords
