@@ -7,4 +7,10 @@
  :aliases
  {:dev {:extra-paths ["dev"]}
 
-  :run {:main-opts ["-m" "roguelike.core"]}}}
+  :run {:main-opts ["-m" "roguelike.core"]}
+
+  :test {:extra-paths ["test"]
+         :extra-deps {org.clojure/test.check         {:mvn/version "1.1.1"}
+                      io.github.cognitect-labs/test-runner
+                      {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+         :main-opts ["-m" "cognitect.test-runner"]}}}
