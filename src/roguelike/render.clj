@@ -1,6 +1,5 @@
 (ns roguelike.render
-  (:require [roguelike.world :as world]
-            [roguelike.level :as level]))
+  (:require [roguelike.level :as level]))
 
 (defn draw-message
   [tg world]

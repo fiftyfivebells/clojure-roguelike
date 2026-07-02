@@ -2,6 +2,7 @@
   (:require [roguelike.world :as world]))
 
 (defmulti bump-action
+  "Multi method for dispatching to different functions to determing the behavior depending on tile type."
   (fn [_world destination-tile _coords]
     (get-in destination-tile [:tile :type])))
 
@@ -10,6 +11,9 @@
       (world/move-player world destination-coords))
 
 (defn update-world
+  "Overall update function. This is pure; it takes in a 'world' map and an input, then dispatches to the
+  appropriate function and returns an updated world. Does not mutate the original world, but produces a
+  new world with the appropriate update applied."
   [world input]
   (let [world (assoc world :current-msg "")]
     (case (:type input)

@@ -36,21 +36,27 @@
                       {:x x :y y :width width :height height})))))
 
 (defn tile-at
+  "Getter for tiles."
   [level [x y]]
   (assert-in-bounds! level [x y])
   (get-in level [:tiles y x]))
 
 (defn set-tile
+  "Setter for tiles. Sets the tile in (level) at the provided coords ([x y]) using the provided function f.
+  This is used for adding something new to the level at [x y]."
   [level [x y] tile]
   (assert-in-bounds! level [x y])
   (assoc-in level [:tiles y x] tile))
 
 (defn update-tile
+  "Updater for tiles. Updates the tile in (level) at the provided coords ([x y]) using the provided function f.
+  This is used for altering the tile at [x y] in some way (ie. setting a door from closed to open)."
   [level [x y] f]
   (assert-in-bounds! level [x y])
   (update-in level [:tiles y x] f))
 
 (defn is-passable?
+  "Consumes a tile and returns a boolean telling whether the tile can be passed through or not."
   [tile]
   (case (:type tile)
     :wall        false
@@ -67,6 +73,8 @@
     {:tiles tiles}))
 
 (defn level->tile-list
+  "Converts a level into a list of tiles and their (x, y) coordinates. This allows the caller to view the level
+  as a flat list and perform operations like map, reduce, etc."
   [level]
   (let [tiles (:tiles level)]
     (for [y (range (count tiles))

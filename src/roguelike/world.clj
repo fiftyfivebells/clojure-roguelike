@@ -16,9 +16,12 @@
     :mode {:screen :play}})
 
 (defn clamp-position
-  [world {new-x :x new-y :y}]
-  {:x (max 0 (min new-x (- (:width world) 1)))
-   :y (max 0 (min new-y (- (:map-rows world) 1)))})
+  "Takes in a world and a pair of coordinates. Checks against the boundary of the world before returning the
+  new coordinates. The return value is either the coordinates that were passed (if they are within the bounds
+  of the world) or the edge of the world."
+  [world [new-x new-y]]
+  [(max 0 (min new-x (- (:width world) 1)))
+   (max 0 (min new-y (- (:map-rows world) 1)))])
 
 (defn add-message
   [world message]
@@ -27,24 +30,30 @@
       (update :messages conj message)))
 
 (defn get-tile
+  "Takes in a world and coords, then dispatches to the tile-at function in the level namespace using the
+  currently active level. Returns a map containing the tile at the coords and the x and y positions."
   [world [x y]]
   (let [tile (level/tile-at (:current-level world) [x y])]
     {:tile tile :x x :y y}))
 
 (defn get-proposed-coords
+  "Takes in a world and an [x y] delta. Then it calls applies the delta to the player glyph's current
+  position and returns the result of clamp-position."
   [world delta]
   (let [[x y] delta
         player-pos (:player world)
         new-x (+ (:x player-pos) x)
-        new-y (+ (:y player-pos) y)
-        new-pos (clamp-position world {:x new-x :y new-y})]
-    [(:x new-pos) (:y new-pos)]))
+        new-y (+ (:y player-pos) y)]
+    (clamp-position world [new-x new-y])))
 
 (defn move-player
+  "Moves the player in the world to the provided coordinates. Returns a new world with the player
+  glyph at the new coordinates."
   [world [x y]]
-  (let [new-pos (clamp-position world {:x x :y y})]
+  (let [new-pos (clamp-position world [x y])]
     (assoc world :player new-pos)))
 
 (defn set-mode
+  "Updates the world's mode."
   [world mode]
   (assoc world :mode mode))
