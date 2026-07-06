@@ -35,25 +35,29 @@
       (throw (ex-info "tile coordinates are out of bounds"
                       {:x x :y y :width width :height height})))))
 
+(defn- resolve-coords
+  "Translates the x,y coords received from callers into the row-major y,x representation that the level uses
+  for its shape (a vector of row vectors)."
+  [level [x y]]
+  (assert-in-bounds! level [x y])
+  [(:tiles level) y x])
+
 (defn tile-at
   "Getter for tiles."
   [level [x y]]
-  (assert-in-bounds! level [x y])
-  (get-in level [:tiles y x]))
+  (get-in level (resolve-coords level [x y])))
 
 (defn set-tile
   "Setter for tiles. Sets the tile in (level) at the provided coords ([x y]) using the provided function f.
   This is used for adding something new to the level at [x y]."
   [level [x y] tile]
-  (assert-in-bounds! level [x y])
-  (assoc-in level [:tiles y x] tile))
+  (assoc-in level (resolve-coords level [x y]) tile))
 
 (defn update-tile
   "Updater for tiles. Updates the tile in (level) at the provided coords ([x y]) using the provided function f.
   This is used for altering the tile at [x y] in some way (ie. setting a door from closed to open)."
   [level [x y] f]
-  (assert-in-bounds! level [x y])
-  (update-in level [:tiles y x] f))
+  (update-in level (resolve-coords level [x y]) f))
 
 (defn is-passable?
   "Consumes a tile and returns a boolean telling whether the tile can be passed through or not."
@@ -66,7 +70,7 @@
 (defn test-level
   []
   (let [tiles (vec (for [y (range 22)]
-                     (vec (for [x (range 79)]
+                     (vec (for [x (range 80)]
                             (if (and (< y 21) (> y 0) (< x 78) (> x 0))
                               (:floor tile-types)
                               (:wall tile-types))))))]
