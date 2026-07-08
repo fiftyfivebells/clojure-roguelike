@@ -3,27 +3,39 @@
 
 (defn new-world
   []
-  {:game {:player        {:x 10 :y 12}
+  {:game {:player {:id 0 :type :player :pos [10 12]}
           :current-level (level/test-level)
-          :levels        []}
+          :levels        []
+          :next-entity-id 1}
    :ui   {:mode {:screen :play}
           :current-msg "Welcome to the dungeon."
           :messages []}})
-assoc-in
-;; (defn new-world
-;;   []
-;;    {:player {:x 10 :y 12}
-;;     :width 80
-;;     :play-start-row 1
-;;     :current-level (level/test-level)
-;;     :levels []
-;;     :map-rows 22
-;;     :msg-row 23
-;;     :current-msg "Welcome to the dungeon."
-;;     :messages ["Welcome to the dungeon."]
-;;     :height 24
-;;     :mode {:screen :play}})
 
+(defn player-entity
+  [world]
+  (:player (:game world)))
+
+(defn player-pos
+  [world]
+  (:pos (player-entity world)))
+
+(defn active-actors
+  "Gets a list of all active entities in the current level. Essentially just conjs the player onto the list
+  of entities for the level."
+  [world]
+  (conj (:player (:game world)) (level/entities-of (:level (:game world)))))
+
+(defn entity-at
+  "Gets the entity at the given coord pair. If the pair is the player's position, return the player. Otherwise,
+  get the monster entity's position from the level. Returns nil if there's no entity at the position."
+  [world [x y]]
+  (let [player (:player (:game world))
+        player-pos (:pos player)]
+    (if (= player-pos [x y])
+      player
+      (level/entity-at (:level (:game world)) [x y]))))
+
+;; TODO: is this redundant now? check later
 (defn clamp-position
   "Takes in a world and a pair of coordinates. Checks against the boundary of the world before returning the
   new coordinates. The return value is either the coordinates that were passed (if they are within the bounds
@@ -54,9 +66,9 @@ assoc-in
   [world delta]
   (let [[x y] delta
         game (:game world)
-        player-pos (:player game)
-        new-x (+ (:x player-pos) x)
-        new-y (+ (:y player-pos) y)]
+        [player-x player-y] (:pos (:player game))
+        new-x (+ player-x x)
+        new-y (+ player-y y)]
     (clamp-position world [new-x new-y])))
 
 (defn move-player
