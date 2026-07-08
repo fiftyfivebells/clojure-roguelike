@@ -22,9 +22,9 @@
   (loop [world (world/new-world)]
     (render/draw-world screen world)
     (let [key-event (input/read-key screen)
-          action (input/key->action key-event (:mode world))
+          action (input/key->action key-event (:mode (:ui world)))
           new-world (u/update-world world action)]
-      (when (not= (:mode new-world) :quit)
+      (when (not= (:mode (:ui new-world)) :quit)
         (recur new-world)))))
 
 (defn -main [& args]

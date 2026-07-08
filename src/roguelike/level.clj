@@ -12,7 +12,7 @@
 ;;   [. . . .]
 ;;   [. . . .]]
 
-(defn- level-dimensions
+(defn level-dimensions
   [level]
   (let [tiles (:tiles level)
         width (count (first tiles))
@@ -40,24 +40,24 @@
   for its shape (a vector of row vectors)."
   [level [x y]]
   (assert-in-bounds! level [x y])
-  [(:tiles level) y x])
+  [y x])
 
 (defn tile-at
   "Getter for tiles."
   [level [x y]]
-  (get-in level (resolve-coords level [x y])))
+  (get-in (:tiles level) (resolve-coords level [x y])))
 
 (defn set-tile
   "Setter for tiles. Sets the tile in (level) at the provided coords ([x y]) using the provided function f.
   This is used for adding something new to the level at [x y]."
   [level [x y] tile]
-  (assoc-in level (resolve-coords level [x y]) tile))
+  (assoc-in (:tiles level) (resolve-coords level [x y]) tile))
 
 (defn update-tile
   "Updater for tiles. Updates the tile in (level) at the provided coords ([x y]) using the provided function f.
   This is used for altering the tile at [x y] in some way (ie. setting a door from closed to open)."
   [level [x y] f]
-  (update-in level (resolve-coords level [x y]) f))
+  (update-in (:tiles level) (resolve-coords level [x y]) f))
 
 (defn is-passable?
   "Consumes a tile and returns a boolean telling whether the tile can be passed through or not."

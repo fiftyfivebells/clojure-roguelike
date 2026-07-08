@@ -1,13 +1,27 @@
 (ns roguelike.render
   (:require [roguelike.level :as level]))
 
+(defn- screen-dimensions
+  [screen]
+  (let [size (.getTerminalSize screen)]
+    {:width (.getColumns size) :height (.getRows size)}))
+
+(defn- calculate-layout
+  [dimensions]
+  (let [width  (:width dimensions)
+        height (:height dimensions)]
+    {:play-start-row 1
+     :msg-row (- height 1)
+     :map-rows (- height 2)}))
+
 (defn draw-message
-  [tg world]
-  (let [mode (:mode world)]
+  [tg world msg-row]
+  (let [mode (:mode (:ui world))
+        ui   (:ui world)]
     (case (:screen mode)
       :prompt (.putString tg 0 0 (:message mode))
-      (when-let [msg (:current-msg world)]
-        (.putString tg 0 (:msg-row world) msg)))))
+      (when-let [msg (:current-msg ui)]
+        (.putString tg 0 msg-row msg)))))
 
 (defn draw-level
   [tg level start-row]
@@ -19,13 +33,16 @@
 
 (defn draw-world
   [screen world]
-  (let [player-coord (:player world)
+  (let [game (:game world)
+        player-coord (:player game)
+        dimensions (screen-dimensions screen)
+        layout (calculate-layout dimensions)
         tg (.newTextGraphics screen)]
     (.clear screen)
-    (draw-level tg (:current-level world) (:play-start-row world))
+    (draw-level tg (:current-level game) (:play-start-row layout))
     (.putString tg
                 (:x player-coord)
-                (+ (:play-start-row world) (:y player-coord))
+                (+ (:play-start-row layout) (:y player-coord))
                 "@")
-    (draw-message tg world)
+    (draw-message tg world (:msg-row layout))
     (.refresh screen)))
