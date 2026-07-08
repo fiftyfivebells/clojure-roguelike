@@ -7,7 +7,9 @@
 
 
 ;; level is a map of keys
-;; (:tiles level) is a vector of vectors (3x4 example):
+;; :entities is a map of entity-id -> entity
+;; :pos-id is a map of position -> entity-id for faster lookups
+;; :tiles is a vector of vectors (3x4 example):
 ;; [ [. . . .]
 ;;   [. . . .]
 ;;   [. . . .]]
@@ -67,6 +69,40 @@
     :floor       true
     :closed-door (if (:open? tile) true false)))
 
+(defn- allocate-entity-id
+  [world]
+  (let [next-entity-id (:next-entity-id world)]
+    (when (= 0 next-entity-id)
+      (throw (ex-info "entity id 0 is reserved for the player" {:entity-id next-entity-id})))
+    [next-entity-id (inc next-entity-id)]))
+
+(defn entity-at
+  "Takes the level and gets the entity at the given pos or nil if there isn't one."
+  [level [x y]]
+  (let [entities (:entities level)]
+    (some #(when (= (:pos %) [x y]) %) (vals entities))))
+
+(defn add-entity
+  "Places the given entity into the given level."
+  [level entity]
+  (assoc-in level [:entities (:id entity)] entity))
+
+(defn remove-entity
+  "Removes the entity associated with the given entity-id from the given level."
+  [level entity-id]
+  (update-in level [:entities] dissoc entity-id))
+
+;; TODO: I don't think this is right
+(defn update-entity
+  "Uses the provided update function to update the entity with the given id in the given level."
+  [level entity-id f]
+  (update-in level [:entities entity-id] f))
+
+(defn entities-of
+  "Provides a vector of all the entities in the level."
+  [level]
+  (vals (:entities level)))
+
 (defn test-level
   ([]
    (test-level 80 22))
@@ -79,7 +115,8 @@
                                       (> x 0))
                                (:floor tile-types)
                                (:wall tile-types))))))]
-     {:tiles tiles})))
+     {:tiles tiles
+      :entities {1 {:pos [0 0]}}})))  ;; TODO: update this to actually fill with monsters eventually
 
 (defn level->tile-list
   "Converts a level into a list of tiles and their (x, y) coordinates. This allows the caller to view the level
