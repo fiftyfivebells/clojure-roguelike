@@ -68,13 +68,18 @@
     :closed-door (if (:open? tile) true false)))
 
 (defn test-level
-  []
-  (let [tiles (vec (for [y (range 22)]
-                     (vec (for [x (range 80)]
-                            (if (and (< y 21) (> y 0) (< x 78) (> x 0))
-                              (:floor tile-types)
-                              (:wall tile-types))))))]
-    {:tiles tiles}))
+  ([]
+   (test-level 80 22))
+  ([width height]
+   (let [tiles (vec (for [y (range height)]
+                      (vec (for [x (range width)]
+                             (if (and (< y (dec height))
+                                      (> y 0)
+                                      (< x (dec width))
+                                      (> x 0))
+                               (:floor tile-types)
+                               (:wall tile-types))))))]
+     {:tiles tiles})))
 
 (defn level->tile-list
   "Converts a level into a list of tiles and their (x, y) coordinates. This allows the caller to view the level
