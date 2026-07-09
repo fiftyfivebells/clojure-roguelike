@@ -34,15 +34,15 @@
 (defn draw-world
   [screen world]
   (let [game (:game world)
-        player-coord (:player game)
+        [player-x player-y] (:pos (:player game))
         dimensions (screen-dimensions screen)
         layout (calculate-layout dimensions)
         tg (.newTextGraphics screen)]
     (.clear screen)
     (draw-level tg (:current-level game) (:play-start-row layout))
     (.putString tg
-                (:x player-coord)
-                (+ (:play-start-row layout) (:y player-coord))
+                player-x
+                (+ (:play-start-row layout) player-y)
                 "@")
     (draw-message tg world (:msg-row layout))
     (.refresh screen)))

@@ -8,7 +8,6 @@
 
 ;; level is a map of keys
 ;; :entities is a map of entity-id -> entity
-;; :pos-id is a map of position -> entity-id for faster lookups
 ;; :tiles is a vector of vectors (3x4 example):
 ;; [ [. . . .]
 ;;   [. . . .]
@@ -53,13 +52,15 @@
   "Setter for tiles. Sets the tile in (level) at the provided coords ([x y]) using the provided function f.
   This is used for adding something new to the level at [x y]."
   [level [x y] tile]
-  (assoc-in (:tiles level) (resolve-coords level [x y]) tile))
+  (let [[new-y new-x] (resolve-coords level [x y])]
+    (assoc-in level [:tiles new-y new-x] tile)))
 
 (defn update-tile
   "Updater for tiles. Updates the tile in (level) at the provided coords ([x y]) using the provided function f.
   This is used for altering the tile at [x y] in some way (ie. setting a door from closed to open)."
   [level [x y] f]
-  (update-in (:tiles level) (resolve-coords level [x y]) f))
+  (let [[new-y new-x] (resolve-coords level [x y])]
+    (update-in level [:tiles new-y new-x] f)))
 
 (defn is-passable?
   "Consumes a tile and returns a boolean telling whether the tile can be passed through or not."
@@ -69,18 +70,15 @@
     :floor       true
     :closed-door (if (:open? tile) true false)))
 
-(defn- allocate-entity-id
-  [world]
-  (let [next-entity-id (:next-entity-id world)]
-    (when (= 0 next-entity-id)
-      (throw (ex-info "entity id 0 is reserved for the player" {:entity-id next-entity-id})))
-    [next-entity-id (inc next-entity-id)]))
-
 (defn entity-at
   "Takes the level and gets the entity at the given pos or nil if there isn't one."
   [level [x y]]
   (let [entities (:entities level)]
     (some #(when (= (:pos %) [x y]) %) (vals entities))))
+
+(defn get-entity
+  [level entity-id]
+  (get (:entities level) entity-id))
 
 (defn add-entity
   "Places the given entity into the given level."
@@ -116,7 +114,7 @@
                                (:floor tile-types)
                                (:wall tile-types))))))]
      {:tiles tiles
-      :entities {1 {:pos [0 0]}}})))  ;; TODO: update this to actually fill with monsters eventually
+      :entities {}})))  ;; TODO: update this to actually fill with monsters eventually
 
 (defn level->tile-list
   "Converts a level into a list of tiles and their (x, y) coordinates. This allows the caller to view the level

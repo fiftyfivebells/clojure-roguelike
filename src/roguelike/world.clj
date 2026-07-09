@@ -11,6 +11,13 @@
           :current-msg "Welcome to the dungeon."
           :messages []}})
 
+;; (defn- allocate-entity-id
+;;   [world]
+;;   (let [next-entity-id (:next-entity-id world)]
+;;     (when (= 0 next-entity-id)
+;;       (throw (ex-info "entity id 0 is reserved for the player" {:entity-id next-entity-id})))
+;;     [next-entity-id (inc next-entity-id)]))
+
 (defn player-entity
   [world]
   (:player (:game world)))
@@ -19,11 +26,28 @@
   [world]
   (:pos (player-entity world)))
 
+(defn- player?
+  [world id]
+  (let [player (:player (:game world))]
+    (= id (:id player))))
+
 (defn active-actors
   "Gets a list of all active entities in the current level. Essentially just conjs the player onto the list
   of entities for the level."
   [world]
-  (conj (:player (:game world)) (level/entities-of (:level (:game world)))))
+  (conj (level/entities-of (:current-level (:game world))) (:player (:game world))))
+
+(defn get-actor
+  [world entity-id]
+  (if (player? world entity-id)
+    (:player (:game world))
+    (level/get-entity (:current-level (:game world)) entity-id)))
+
+(defn update-actor
+  [world entity-id f]
+  (if (player? world entity-id)
+    (update-in world [:game :player] f)
+    (update-in world [:game :current-level] level/update-entity entity-id f)))
 
 (defn entity-at
   "Gets the entity at the given coord pair. If the pair is the player's position, return the player. Otherwise,
@@ -33,7 +57,7 @@
         player-pos (:pos player)]
     (if (= player-pos [x y])
       player
-      (level/entity-at (:level (:game world)) [x y]))))
+      (level/entity-at (:current-level (:game world)) [x y]))))
 
 ;; TODO: is this redundant now? check later
 (defn clamp-position
@@ -75,8 +99,9 @@
   "Moves the player in the world to the provided coordinates. Returns a new world with the player
   glyph at the new coordinates."
   [world [x y]]
-  (let [[new-x new-y] (clamp-position world [x y])]
-    (assoc-in world [:game :player] {:x new-x :y new-y})))
+  (let [pos (clamp-position world [x y])
+        player-id (:id (:player (:game world)))]
+    (update-actor world player-id #(assoc % :pos pos))))
 
 (defn set-mode
   "Updates the world's mode."
