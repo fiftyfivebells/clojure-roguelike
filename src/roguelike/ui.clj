@@ -21,7 +21,7 @@
       (assoc ui :mode (:return (:mode ui)))
 
       "quit"
-      (assoc ui :mode :quit))))
+      (assoc ui :mode {:screen :quit}))))
 
 (defn add-message
   [ui message]

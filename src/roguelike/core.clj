@@ -23,7 +23,7 @@
     (let [key-event    (input/read-key screen)
           action       (input/key->action key-event (:mode (:ui game)))
           updated-game (game/update-game game action)]
-      (when (not= (:mode (:ui updated-game)) :quit)
+      (when (not= (get-in updated-game [:ui :mode :screen]) :quit)
         (recur updated-game)))))
 
 (defn -main [& args]
