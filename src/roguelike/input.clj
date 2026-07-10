@@ -15,15 +15,15 @@
   [key-event]
   (cond
     (and (:ctrl? key-event) (= (:key key-event) \x))
-    {:type :prompt
+    {:type :ui/prompt
      :message "Really quit? (y to confirm, any other key to cancel)"
-     :on-yes {:type :quit}
+     :on-yes {:type :ui/quit}
      :return {:screen :play}}
 
-    (= (:key key-event) \h) {:type :move :dx -1 :dy 0}
-    (= (:key key-event) \l) {:type :move :dx 1  :dy 0}
-    (= (:key key-event) \j) {:type :move :dx 0  :dy 1}
-    (= (:key key-event) \k) {:type :move :dx 0  :dy -1}
+    (= (:key key-event) \h) {:type :world/move :dx -1 :dy 0}
+    (= (:key key-event) \l) {:type :world/move :dx 1  :dy 0}
+    (= (:key key-event) \j) {:type :world/move :dx 0  :dy 1}
+    (= (:key key-event) \k) {:type :world/move :dx 0  :dy -1}
 
     :else {:type :none}))
 

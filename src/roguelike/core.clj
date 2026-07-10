@@ -1,8 +1,7 @@
 (ns roguelike.core
-  (:require [roguelike.input :as input]
-            [roguelike.world :as world]
+  (:require [roguelike.input  :as input]
             [roguelike.render :as render]
-            [roguelike.update :as u])
+            [roguelike.game   :as game])
   (:import [com.googlecode.lanterna.terminal DefaultTerminalFactory]
            [com.googlecode.lanterna.terminal.swing SwingTerminalFontConfiguration]
            [com.googlecode.lanterna TerminalSize]))
@@ -19,13 +18,13 @@
 
 (defn run-game
   [screen]
-  (loop [world (world/new-world)]
-    (render/draw-world screen world)
-    (let [key-event (input/read-key screen)
-          action (input/key->action key-event (:mode (:ui world)))
-          new-world (u/update-world world action)]
-      (when (not= (:mode (:ui new-world)) :quit)
-        (recur new-world)))))
+  (loop [game (game/new-game)]
+    (render/draw-game screen game)
+    (let [key-event    (input/read-key screen)
+          action       (input/key->action key-event (:mode (:ui game)))
+          updated-game (game/update-game game action)]
+      (when (not= (:mode (:ui updated-game)) :quit)
+        (recur updated-game)))))
 
 (defn -main [& args]
   (let [screen (get-new-screen)]
