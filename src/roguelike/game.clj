@@ -17,5 +17,7 @@
           (update :ui ui/apply-event event)))
 
     "ui"
-    (update game :ui ui/update-mode action)))
+    (update game :ui ui/update-mode action)
+
+    (ex-info "unroutable action" {:action action})))
 

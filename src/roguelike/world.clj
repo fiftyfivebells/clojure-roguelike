@@ -1,6 +1,9 @@
 (ns roguelike.world
   (:require [roguelike.level :as level]))
 
+;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
+;; this is so I don't have to move the player in and out of the lists for the different levels.
+;; the entire idea behind the "active-actors" function below is to facilitate this.
 (defn new-world
   []
   {:player {:id 0 :type :player :pos [10 12]}
@@ -56,16 +59,6 @@
       player
       (level/entity-at (:current-level world) [x y]))))
 
-;; TODO: is this redundant now? check later
-(defn clamp-position
-  "Takes in a world and a pair of coordinates. Checks against the boundary of the world before returning the
-  new coordinates. The return value is either the coordinates that were passed (if they are within the bounds
-  of the world) or the edge of the world."
-  [world [new-x new-y]]
-  (let [[width height] (level/level-dimensions (:current-level world))]
-    [(max 0 (min new-x (- width 1)))
-     (max 0 (min new-y (- height 1)))]))
-
 (defn get-tile
   "Takes in a world and coords, then dispatches to the tile-at function in the level namespace using the
   currently active level. Returns a map containing the tile at the coords and the x and y positions."
@@ -81,47 +74,27 @@
         [player-x player-y] (:pos (:player world))
         new-x (+ player-x x)
         new-y (+ player-y y)]
-    (clamp-position world [new-x new-y])))
+    [new-x new-y]))
 
 (defn move-player
   "Moves the player in the world to the provided coordinates. Returns a new world with the player
   glyph at the new coordinates."
   [world [x y]]
-  (let [pos (clamp-position world [x y])
-        player-id (:id (:player world))]
+  (let [player-id (:id (:player world))]
     (update-actor world player-id #(assoc % :pos pos))))
-
-;; TODO: is this the same thing that "attempt-movement" is trying to do?
-;;       one I'm at parity, investigate
-;; (defmulti bump-action
-;;   "Multi method for dispatching to different functions to determing the behavior depending on tile type."
-;;   (fn [_world destination-tile _coords]
-;;     (get-in destination-tile [:tile :type])))
-;; 
-;; (defmethod bump-action :floor
-;;   [world _tile destination-coords]
-;;   (world/move-player world destination-coords))
-;; 
-;; (defmethod bump-action :wall
-;;   [world _tile _destination-coords]
-;;   (let [msg "You bumped into a wall."]
-;;     (ui/add-message world msg)))
-
 
 (defn attempt-movement
   [world delta]
   (let [new-pos (get-proposed-coords world delta)
         tile (get-tile world new-pos)]
-    (case (get-in tile [:tile :type])
-      :floor [(move-player world new-pos) {:type :moved}]
-      :wall [world {:type :bumped-wall}]
-
-      ;; default case
-      [world nil])))
+    (if (level/is-passable? (:tile tile))
+      [(move-player world new-pos) {:type :moved}]
+      [world {:type :hit-impassable}])))
 
 (defn update-world
   [world action]
   (let [action-type (name (:type action))]
     (case action-type
-      "move" (attempt-movement world [(:dx action) (:dy action)]))))
+      "move" (attempt-movement world [(:dx action) (:dy action)])
+      "none" [world nil])))
 

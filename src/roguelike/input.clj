@@ -25,7 +25,7 @@
     (= (:key key-event) \j) {:type :world/move :dx 0  :dy 1}
     (= (:key key-event) \k) {:type :world/move :dx 0  :dy -1}
 
-    :else {:type :none}))
+    :else {:type :world/none}))
 
 (defn prompt-mode
   "Prompt mode input handler. When the world is in :prompt mode, it reads the key input from the terminal.

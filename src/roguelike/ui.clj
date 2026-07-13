@@ -37,7 +37,7 @@
 (defn apply-event
   [ui event]
   (case (:type event)
-    :bumped-wall (add-message ui "You bumped into a wall.")
+    :hit-impassable (add-message ui "You bumped into a wall.")
 
     ;; default case
     ui))

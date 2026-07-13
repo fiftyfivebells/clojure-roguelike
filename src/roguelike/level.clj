@@ -68,8 +68,11 @@
   (case (:type tile)
     :wall        false
     :floor       true
-    :closed-door (if (:open? tile) true false)))
+    :closed-door (if (:open? tile) true false)
+    false))
 
+;; TODO: keep an eye on sluggishness during turn updates. This is a scan of all entities every time.
+;; it could wind up being slow and needing tuning (maybe a stored pos->id map?)
 (defn entity-at
   "Takes the level and gets the entity at the given pos or nil if there isn't one."
   [level [x y]]
