@@ -1,15 +1,19 @@
 (ns roguelike.world
-  (:require [roguelike.level :as level]))
+  (:require [roguelike.level :as level]
+            [roguelike.rng :as rng]))
 
 ;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
 ;; this is so I don't have to move the player in and out of the lists for the different levels.
 ;; the entire idea behind the "active-actors" function below is to facilitate this.
 (defn new-world
-  []
-  {:player {:id 0 :type :player :pos [10 12]}
-   :current-level (level/test-level)
-   :levels        []
-   :next-entity-id 1})
+  ([]
+   (new-world 123456789))  ;; just some default seed
+  ([seed]
+   {:player {:id 0 :type :player :pos [10 12]}
+    :current-level (level/test-level)
+    :levels        []
+    :next-entity-id 1
+    :rng-state (rng/make seed)}))
 
 ;; (defn- allocate-entity-id
 ;;   [world]
@@ -81,7 +85,7 @@
   glyph at the new coordinates."
   [world [x y]]
   (let [player-id (:id (:player world))]
-    (update-actor world player-id #(assoc % :pos pos))))
+    (update-actor world player-id #(assoc % :pos [x y]))))
 
 (defn attempt-movement
   [world delta]
