@@ -92,13 +92,13 @@
   (let [new-pos (get-proposed-coords world delta)
         tile (get-tile world new-pos)]
     (if (level/is-passable? (:tile tile))
-      [(move-player world new-pos) {:type :moved}]
-      [world {:type :hit-impassable}])))
+      [(move-player world new-pos) [{:type :moved}]]
+      [world [{:type :hit-impassable}]])))
 
 (defn update-world
   [world action]
   (let [action-type (name (:type action))]
     (case action-type
       "move" (attempt-movement world [(:dx action) (:dy action)])
-      "none" [world nil])))
+      "none" [world []])))
 

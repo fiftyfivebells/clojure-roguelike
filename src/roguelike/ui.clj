@@ -41,3 +41,7 @@
 
     ;; default case
     ui))
+
+(defn apply-events
+  [ui events]
+  (reduce apply-event ui events))

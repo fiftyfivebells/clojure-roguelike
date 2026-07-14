@@ -11,13 +11,13 @@
   [game action]
   (case (namespace (:type action))
     "world"
-    (let [[new-world event] (world/update-world (:world game) action)]
+    (let [[new-world events] (world/update-world (:world game) action)
+          new-ui             (ui/apply-events (:ui game) events)]
       (-> game
           (assoc :world new-world)
-          (update :ui ui/apply-event event)))
+          (assoc :ui new-ui)))
 
     "ui"
     (update game :ui ui/update-mode action)
 
-    (ex-info "unroutable action" {:action action})))
-
+    (throw (ex-info "unroutable action" {:action action}))))
