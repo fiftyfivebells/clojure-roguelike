@@ -24,8 +24,9 @@
     (= (:key key-event) \l) {:type :world/move :dx 1  :dy 0}
     (= (:key key-event) \j) {:type :world/move :dx 0  :dy 1}
     (= (:key key-event) \k) {:type :world/move :dx 0  :dy -1}
+    (= (:key key-event) \.) {:type :world/wait}
 
-    :else {:type :world/none}))
+    :else {:type :ui/none}))
 
 (defn prompt-mode
   "Prompt mode input handler. When the world is in :prompt mode, it reads the key input from the terminal.
@@ -34,7 +35,7 @@
   [key-event mode]
   (if (= (:key key-event) \y)
     (:on-yes mode)
-    {:type :return}))
+    {:type :ui/return}))
 
 (defn key->action
   "Dispatcher: depending on the screen that the world's mode is set to, it delegates to the appropriate
