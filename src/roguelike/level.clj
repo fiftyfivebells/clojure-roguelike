@@ -88,15 +88,22 @@
   [level entity]
   (assoc-in level [:entities (:id entity)] entity))
 
+(defn- assert-entity-exists!
+  [level entity-id]
+  (when (nil? (get-entity level entity-id))
+    (throw (ex-info "provided entity id does not exist"
+                    {:id entity-id}))))
+
 (defn remove-entity
   "Removes the entity associated with the given entity-id from the given level."
   [level entity-id]
+  (assert-entity-exists! level entity-id)
   (update-in level [:entities] dissoc entity-id))
 
-;; TODO: I don't think this is right
 (defn update-entity
   "Uses the provided update function to update the entity with the given id in the given level."
   [level entity-id f]
+  (assert-entity-exists! level entity-id)
   (update-in level [:entities entity-id] f))
 
 (defn entities-of
