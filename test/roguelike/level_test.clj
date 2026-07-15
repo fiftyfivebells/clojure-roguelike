@@ -98,16 +98,16 @@
 ;;; is-passable?
 
 (deftest is-passable-wall
-  (is (false? (level/is-passable? wall))))
+  (is (false? (level/passable? wall))))
 
 (deftest is-passable-floor
-  (is (true? (level/is-passable? floor))))
+  (is (true? (level/passable? floor))))
 
 (deftest is-passable-closed-door
-  (is (false? (level/is-passable? door))))
+  (is (false? (level/passable? door))))
 
 (deftest is-passable-open-door
-  (is (true? (level/is-passable? (assoc door :open? true)))))
+  (is (true? (level/passable? (assoc door :open? true)))))
 
 ;;; Property-based tests
 
