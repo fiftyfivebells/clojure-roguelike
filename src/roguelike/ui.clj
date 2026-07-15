@@ -8,20 +8,19 @@
 
 (defn update-mode
   [ui action]
-  (let [action-type (name (:type action))]
-    (case action-type
-      "prompt"
-      (let [{:keys [message on-yes return]} action]
-        (assoc ui :mode {:screen :prompt
-                         :message message
-                         :on-yes on-yes
-                         :return return}))
+  (case (:type action)
+    :ui/prompt
+    (let [{:keys [message on-yes return]} action]
+      (assoc ui :mode {:screen :prompt
+                       :message message
+                       :on-yes on-yes
+                       :return return}))
 
-      "return"
-      (assoc ui :mode (:return (:mode ui)))
+    :ui/return
+    (assoc ui :mode (:return (:mode ui)))
 
-      "quit"
-      (assoc ui :mode {:screen :quit}))))
+    :ui/quit
+    (assoc ui :mode {:screen :quit})))
 
 (defn add-message
   [ui message]
@@ -29,6 +28,11 @@
       (assoc :current-msg message)
       (update :messages conj message)))
 
+(defn- blocked-message
+  [by]
+  (case by
+    :wall "You bumped into a wall."
+    :closed-door "You found a closed door."))
 ;; what is an event?
 ;; proposed shape:
 ;; :type -> the event type
@@ -37,7 +41,7 @@
 (defn apply-event
   [ui event]
   (case (:type event)
-    :hit-impassable (add-message ui "You bumped into a wall.")
+    :blocked (add-message ui (blocked-message (:by event)))
 
     ;; default case
     ui))
