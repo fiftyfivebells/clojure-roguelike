@@ -15,6 +15,11 @@
     :next-entity-id 1
     :rng-state (rng/make seed)}))
 
+(defn current-level->tile-list
+  "Takes a world and gives back a list of every tile in the current level along with its [x y] position."
+  [world]
+  (level/level->tile-list (:current-level world)))
+
 ;; (defn- allocate-entity-id
 ;;   [world]
 ;;   (let [next-entity-id (:next-entity-id world)]

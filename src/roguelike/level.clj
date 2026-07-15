@@ -62,7 +62,7 @@
   (let [[new-y new-x] (resolve-coords level [x y])]
     (update-in level [:tiles new-y new-x] f)))
 
-(defn is-passable?
+(defn passable?
   "Consumes a tile and returns a boolean telling whether the tile can be passed through or not."
   [tile]
   (case (:type tile)
@@ -130,8 +130,6 @@
   "Converts a level into a list of tiles and their (x, y) coordinates. This allows the caller to view the level
   as a flat list and perform operations like map, reduce, etc."
   [level]
-  (let [tiles (:tiles level)]
-    (for [y (range (count tiles))
-          x (range (count (tiles y)))
-          :let [tile (tile-at level [x y])]]
-      (assoc tile :x x :y y))))
+  (for [[y row] (map-indexed vector (:tiles level))
+        [x tile] (map-indexed vector row)]
+    (assoc tile :pos [x y])))

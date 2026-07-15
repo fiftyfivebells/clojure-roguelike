@@ -1,5 +1,5 @@
 (ns roguelike.render
-  (:require [roguelike.level :as level]))
+  (:require [roguelike.world :as world]))
 
 (defn- screen-dimensions
   [screen]
@@ -23,10 +23,9 @@
         (.putString tg 0 msg-row msg)))))
 
 (defn draw-level
-  [tg level start-row]
-  (doseq [tile (level/level->tile-list level)]
-    (let [x (:x tile)
-          y (:y tile)
+  [tg world start-row]
+  (doseq [tile (world/current-level->tile-list world)]
+    (let [[x y] (:pos tile)
           glyph (str (:glyph tile))]
       (.putString tg x (+ y start-row) glyph))))
 
@@ -39,7 +38,7 @@
         layout (calculate-layout dimensions)
         tg (.newTextGraphics screen)]
     (.clear screen)
-    (draw-level tg (:current-level world) (:play-start-row layout))
+    (draw-level tg world (:play-start-row layout))
     (.putString tg
                 player-x
                 (+ (:play-start-row layout) player-y)
