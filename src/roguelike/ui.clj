@@ -31,8 +31,9 @@
 (defn- blocked-message
   [by]
   (case by
-    :wall "You bumped into a wall."
-    :closed-door "You found a closed door."))
+    :blocked-wall "You bumped into a wall."
+    :blocked-door "You found a closed door."
+    "Something's in your way."))
 ;; what is an event?
 ;; proposed shape:
 ;; :type -> the event type

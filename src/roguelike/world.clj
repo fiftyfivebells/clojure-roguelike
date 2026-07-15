@@ -101,13 +101,25 @@
   [world actor-id [x y]]
   (update-actor world actor-id #(assoc % :pos [x y])))
 
+(defn classify-destination
+  "Classifies what's at the given coords for movement purposes: :passable, :blocked-wall,
+  or :blocked-door. This is the seam that owns tile-based movement classification, so
+  callers never need to read a tile's raw :type themselves."
+  [world [x y]]
+  (case (level/classify-tile (level/tile-at (:current-level world) [x y]))
+    :floor       :passable
+    :open-door   :passable
+    :wall        :blocked-wall
+    :closed-door :blocked-door
+    :blocked-unknown))
+
 (defn attempt-movement
   [world actor-id delta]
   (let [new-pos (get-proposed-coords world actor-id delta)
-        tile (tile-at world new-pos)]
-    (if (level/passable? tile)
+        destination (classify-destination world new-pos)]
+    (if (= destination :passable)
       [(move-actor world actor-id new-pos) [{:type :moved}]]
-      [world [{:type :blocked :by (:type tile)}]])))
+      [world [{:type :blocked :by destination}]])))
 
 (defn- update-world
   [world actor-id action]

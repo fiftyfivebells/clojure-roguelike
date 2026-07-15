@@ -62,14 +62,23 @@
   (let [[new-y new-x] (resolve-coords level [x y])]
     (update-in level [:tiles new-y new-x] f)))
 
+(def ^:private passable-classifications #{:floor :open-door})
+
+(defn classify-tile
+  "Returns the semantic classification of a tile: :floor, :wall, :closed-door, :open-door,
+  or :unknown for an unrecognized tile type. This should be the one place that translates a
+  tile's raw :type into the vocabulary callers should build on."
+  [tile]
+  (case (:type tile)
+    :wall        :wall
+    :floor       :floor
+    :closed-door (if (:open? tile) :open-door :closed-door)
+    :unknown))
+
 (defn passable?
   "Consumes a tile and returns a boolean telling whether the tile can be passed through or not."
   [tile]
-  (case (:type tile)
-    :wall        false
-    :floor       true
-    :closed-door (if (:open? tile) true false)
-    false))
+  (contains? passable-classifications (classify-tile tile)))
 
 ;; TODO: keep an eye on sluggishness during turn updates. This is a scan of all entities every time.
 ;; it could wind up being slow and needing tuning (maybe a stored pos->id map?)
