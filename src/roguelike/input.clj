@@ -20,10 +20,14 @@
      :on-yes {:type :ui/quit}
      :return {:screen :play}}
 
-    (= (:key key-event) \h) {:type :world/move :dx -1 :dy 0}
-    (= (:key key-event) \l) {:type :world/move :dx 1  :dy 0}
-    (= (:key key-event) \j) {:type :world/move :dx 0  :dy 1}
-    (= (:key key-event) \k) {:type :world/move :dx 0  :dy -1}
+    (= (:key key-event) \h) {:type :world/move :delta [-1 0]}
+    (= (:key key-event) \y) {:type :world/move :delta [-1 -1]}
+    (= (:key key-event) \b) {:type :world/move :delta [-1 1]}
+    (= (:key key-event) \n) {:type :world/move :delta [1 1]}
+    (= (:key key-event) \u) {:type :world/move :delta [1 -1]}
+    (= (:key key-event) \l) {:type :world/move :delta [1 0]}
+    (= (:key key-event) \j) {:type :world/move :delta [0 1]}
+    (= (:key key-event) \k) {:type :world/move :delta [0 -1]}
     (= (:key key-event) \.) {:type :world/wait}
 
     :else {:type :ui/none}))
