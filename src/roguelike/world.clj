@@ -15,7 +15,7 @@
 ;; TODO: this is hard-coded and simple for now, but there will eventually be an EDN file with monster
 ;; templates that this pulls from.
 (defn spawn-entity
-  [world entity-template]
+  [world]
   (let [[next-id next-world] (allocate-entity-id world)
         monster {:id next-id :glyph \m :type :generic-monster :pos [15 15] :next-time (:current-time next-world)}]
     (update next-world :current-level level/add-entity monster)))
@@ -34,7 +34,7 @@
                 :next-tick 10
                 :current-time 0
                 :rng-state (rng/make seed)}]
-     (spawn-entity world ""))))
+     (spawn-entity world))))
 
 (defn current-level->tile-list
   "Takes a world and gives back a list of every tile in the current level along with its [x y] position."
