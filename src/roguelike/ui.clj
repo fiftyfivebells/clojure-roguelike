@@ -34,9 +34,9 @@
 (defn- blocked-message
   [by]
   (case by
-    :blocked-wall "You bumped into a wall."
-    :blocked-door "You found a closed door."
-    :blocked-actor "There's someone there!"
+    :wall "You bumped into a wall."
+    :door "You found a closed door."
+    :actor "There's someone there!"
     "Something's in your way."))
 ;; what is an event?
 ;; proposed shape:
