@@ -29,19 +29,22 @@
           glyph (str (:glyph tile))]
       (.putString tg x (+ y start-row) glyph))))
 
+(defn draw-actors
+  [tg world start-row]
+  (doseq [entity (world/active-actors world)]
+    (let [[x y] (:pos entity)
+          glyph (:glyph entity)]
+      (.putString tg x (+ start-row y) (str glyph)))))
+
 (defn draw-game
   [screen game]
   (let [world (:world game)
         ui    (:ui    game)
-        [player-x player-y] (:pos (:player world))
         dimensions (screen-dimensions screen)
         layout (calculate-layout dimensions)
         tg (.newTextGraphics screen)]
     (.clear screen)
     (draw-level tg world (:play-start-row layout))
-    (.putString tg
-                player-x
-                (+ (:play-start-row layout) player-y)
-                "@")
+    (draw-actors tg world (:play-start-row layout))
     (draw-message tg ui (:msg-row layout))
     (.refresh screen)))

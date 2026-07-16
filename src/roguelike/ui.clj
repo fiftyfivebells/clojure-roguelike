@@ -20,7 +20,10 @@
     (assoc ui :mode (:return (:mode ui)))
 
     :ui/quit
-    (assoc ui :mode {:screen :quit})))
+    (assoc ui :mode {:screen :quit})
+
+    ;; default no-ops: just return the ui unchanged
+    ui))
 
 (defn add-message
   [ui message]
@@ -33,6 +36,7 @@
   (case by
     :blocked-wall "You bumped into a wall."
     :blocked-door "You found a closed door."
+    :blocked-actor "There's someone there!"
     "Something's in your way."))
 ;; what is an event?
 ;; proposed shape:
