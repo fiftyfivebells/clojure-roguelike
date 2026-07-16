@@ -1,13 +1,24 @@
 (ns roguelike.world
-  (:require [roguelike.level :as level]
+  (:require [roguelike.ai :as ai]
+            [roguelike.level :as level]
             [roguelike.rng :as rng]))
 
-(defn- cost-of
-  [action]
-  (case (:type action)
-    :world/move 10
-    :world/wait 10
-    (throw (ex-info "this action doesn't exist" {:action action}))))
+(defn- allocate-entity-id
+  [world]
+  (let [next-entity-id (:next-entity-id world)]
+    ;; this when branch should not be possible to reach, it's a "just in case" safety net
+    (when (= 0 next-entity-id)
+      (throw (ex-info "entity id 0 is reserved for the player" {:entity-id next-entity-id})))
+
+    [next-entity-id (update world :next-entity-id inc)]))
+
+;; TODO: this is hard-coded and simple for now, but there will eventually be an EDN file with monster
+;; templates that this pulls from.
+(defn spawn-entity
+  [world entity-template]
+  (let [[next-id next-world] (allocate-entity-id world)
+        monster {:id next-id :glyph \m :type :generic-monster :pos [15 15] :next-time (:current-time next-world)}]
+    (update next-world :current-level level/add-entity monster)))
 
 ;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
 ;; this is so I don't have to move the player in and out of the lists for the different levels.
@@ -16,25 +27,19 @@
   ([]
    (new-world 123456789))  ;; just some default seed
   ([seed]
-   {:player {:id 0 :type :player :pos [10 12] :next-time 0}
-    :current-level (level/test-level)
-    :levels        []
-    :next-entity-id 1
-    :next-tick 10
-    :current-time 0
-    :rng-state (rng/make seed)}))
+   (let [world {:player {:id 0 :glyph \@ :type :player :pos [10 12] :next-time 0}
+                :current-level (level/test-level)
+                :levels        []
+                :next-entity-id 1
+                :next-tick 10
+                :current-time 0
+                :rng-state (rng/make seed)}]
+     (spawn-entity world ""))))
 
 (defn current-level->tile-list
   "Takes a world and gives back a list of every tile in the current level along with its [x y] position."
   [world]
   (level/level->tile-list (:current-level world)))
-
-;; (defn- allocate-entity-id
-;;   [world]
-;;   (let [next-entity-id (:next-entity-id world)]
-;;     (when (= 0 next-entity-id)
-;;       (throw (ex-info "entity id 0 is reserved for the player" {:entity-id next-entity-id})))
-;;     [next-entity-id (inc next-entity-id)]))
 
 (defn player-entity
   [world]
@@ -44,7 +49,7 @@
   [world]
   (:pos (player-entity world)))
 
-(defn- player?
+(defn player?
   [world id]
   (let [player (:player world)]
     (= id (:id player))))
@@ -103,15 +108,17 @@
 
 (defn classify-destination
   "Classifies what's at the given coords for movement purposes: :passable, :blocked-wall,
-  or :blocked-door. This is the seam that owns tile-based movement classification, so
-  callers never need to read a tile's raw :type themselves."
+  :blocked-door, or :blocked-actor. This is the seam that owns tile-based movement
+  classification, so callers never need to read a tile's raw :type themselves."
   [world [x y]]
-  (case (level/classify-tile (level/tile-at (:current-level world) [x y]))
-    :floor       :passable
-    :open-door   :passable
-    :wall        :blocked-wall
-    :closed-door :blocked-door
-    :blocked-unknown))
+  (if (entity-at world [x y])
+    :blocked-actor
+    (case (level/classify-tile (level/tile-at (:current-level world) [x y]))
+      :floor       :passable
+      :open-door   :passable
+      :wall        :blocked-wall
+      :closed-door :blocked-door
+      :blocked-unknown)))
 
 (defn attempt-movement
   [world actor-id delta]
@@ -121,65 +128,15 @@
       [(move-actor world actor-id new-pos) [{:type :moved}]]
       [world [{:type :blocked :by destination}]])))
 
-(defn- update-world
+(defn update-world
   [world actor-id action]
   (case (:type action)
-    :world/move (attempt-movement world actor-id [(:dx action) (:dy action)])
+    :world/move (attempt-movement world actor-id (:delta action))
     :world/wait [world []]
 
-    ;; default: just return world unchanged
+    ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))
 
-(defn- reschedule
-  [world actor-id cost]
-  (update-actor world actor-id #(assoc % :next-time (+ (:current-time world) cost))))
 
-(defn resolve-action
-  [world actor-id action]
-  (let [[new-world events] (update-world world actor-id action)
-        rescheduled-world (reschedule new-world actor-id (cost-of action))]
-    [rescheduled-world events]))
 
-(defn next-scheduled
-  "Looks at a world and returns what is next up in the event scheduler. It could be the player, an entity,
-  or simply advancing the game time one 'tick'. Returns a map with the info for whichever has the lowest next-time.
-  The priority for breaking ties in lowest time is:
-    - actors are always before tick
-    - between actors, lowest id wins always
-  This gives a priority (everything else equal) of player -> monster -> tick."
-  [world]
-  (let [make-scheduled-actor (fn [{:keys [id next-time]}] {:kind :actor :id id :at next-time})
-        priority (fn [{:keys [kind at id]}]
-                   [at
-                    (if (= kind :actor) 0 1)
-                    (or id 0)])
-        reducer (fn [best current]
-                  (if (neg? (compare (priority current) (priority best)))
-                    current
-                    best))
-        actors (map make-scheduled-actor (active-actors world))
-        with-tick (conj actors {:kind :tick :at (:next-tick world)})]
-    (reduce reducer with-tick)))
 
-(defn- tick
-  [world]
-  (assoc world :next-tick (+ (:current-time world) 10)))
-
-(defn advance
-  "Takes a world and advances it. This involves checking through the actors list for the next entity to act,
-  then resolving whatever action that actor needs to take. Right now, this is:
-  - player: returns an :awaiting-input status (needs player input at this point)
-  - monster: uses monster ai to decide on some action for the monster to take
-  - tick: 'ticks' the world forward to the next time unit"
-  [world]
-  (let [scheduled (next-scheduled world)
-        next-world (assoc world :current-time (:at scheduled))]
-    (cond 
-      (= (:kind scheduled) :tick)
-      (let [ticked-world (tick next-world)]
-          [ticked-world [] :ticked])
-
-      (player? world (:id scheduled)) [next-world [] :awaiting-input]
-
-      ;; else branch: decide the entity's next action and resolve it
-      :else (resolve-action next-world (:id scheduled) {:type :world/wait}))))

@@ -1,5 +1,6 @@
 (ns roguelike.game
-  (:require [roguelike.world :as world]
+  (:require [roguelike.scheduler :as scheduler]
+            [roguelike.world :as world]
             [roguelike.ui    :as ui]))
 
 (defn new-game
@@ -9,14 +10,14 @@
 
 (defn advance
   [game]
-  (let [[new-world _ status] (world/advance (:world game))]
+  (let [[new-world _ status] (scheduler/advance (:world game))]
     [(assoc game :world new-world) status]))
 
 (defn update-game
   [game action]
   (case (namespace (:type action))
     "world"
-    (let [[new-world events] (world/resolve-action (:world game) 0 action)
+    (let [[new-world events] (scheduler/resolve-action (:world game) 0 action)
           new-ui             (ui/apply-events (:ui game) events)]
       (-> game
           (assoc :world new-world)
