@@ -45,7 +45,7 @@
   (let [scheduled (next-scheduled world)]
     (when (not (and (= :actor (:kind scheduled))
                     (world/player? world (:entity/id scheduled))))
-      (ex-info "player-action called on an entity that is not the player" {:scheduled scheduled}))
+      (ex-info "player-action called for an entity that is not the player" {:scheduled scheduled :action action}))
     (resolve-action world (world/player-id world) action)))
 
 (defn tick-world
