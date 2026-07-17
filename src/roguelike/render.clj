@@ -33,7 +33,7 @@
   [tg world start-row]
   (doseq [entity (world/active-actors world)]
     (let [[x y] (:pos entity)
-          glyph (:glyph entity)]
+          glyph (world/glyph-for entity)]
       (.putString tg x (+ start-row y) (str glyph)))))
 
 (defn draw-game

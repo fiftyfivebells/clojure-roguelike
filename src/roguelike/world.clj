@@ -3,6 +3,14 @@
             [roguelike.level :as level]
             [roguelike.rng :as rng]))
 
+(def entity-glyphs
+  {:player          \@
+   :generic-monster \m})
+
+(defn glyph-for
+  [entity]
+  (get entity-glyphs (:entity/type entity)))
+
 (defn- allocate-entity-id
   [world]
   (let [next-entity-id (:next-entity-id world)]
@@ -17,7 +25,7 @@
 (defn spawn-entity
   [world]
   (let [[next-id next-world] (allocate-entity-id world)
-        monster {:entity/id next-id :glyph \m :entity/type :generic-monster :pos [15 15] :next-time (:current-time next-world)}]
+        monster {:entity/id next-id :entity/type :generic-monster :pos [15 15] :next-time (:current-time next-world)}]
     (update next-world :current-level level/add-entity monster)))
 
 ;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
@@ -27,7 +35,7 @@
   ([]
    (new-world 123456789))  ;; just some default seed
   ([seed]
-   (let [world {:player {:entity/id 0 :glyph \@ :entity/type :player :pos [10 12] :next-time 0}
+   (let [world {:player {:entity/id 0 :entity/type :player :pos [10 12] :next-time 0}
                 :current-level (level/test-level)
                 :levels        []
                 :next-entity-id 1
