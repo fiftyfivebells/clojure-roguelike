@@ -17,7 +17,7 @@
   [world actor-id action]
   (let [[new-world events] (world/update-world world actor-id action)
         rescheduled-world (reschedule new-world actor-id (cost-of action))]
-    [rescheduled-world events :acted]))
+    [rescheduled-world events]))
 
 (defn next-scheduled
   "Looks at a world and returns what is next up in the event scheduler. It could be the player, an entity,
@@ -45,7 +45,8 @@
   (let [scheduled (next-scheduled world)]
     (when (not (and (= :actor (:kind scheduled))
                     (world/player? world (:entity/id scheduled))))
-      (ex-info "player-action called for an entity that is not the player" {:scheduled scheduled :action action}))
+      (throw
+       (ex-info "player-action called for an entity that is not the player" {:scheduled scheduled :action action})))
     (resolve-action world (world/player-id world) action)))
 
 (defn tick-world
@@ -73,5 +74,6 @@
       ;; else branch: decide the entity's next action and resolve it
       :else
       (let [[new-rng action] (ai/decide (:rng-state next-world) next-world (:entity/id scheduled))
-            next-world (assoc next-world :rng-state new-rng)]
-        (resolve-action next-world (:entity/id scheduled) action)))))
+            next-world (assoc next-world :rng-state new-rng)
+            [resolved-world events] (resolve-action next-world (:entity/id scheduled) action)]
+        [resolved-world events :acted]))))
