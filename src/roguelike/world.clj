@@ -52,6 +52,10 @@
   [world]
   (:player world))
 
+(defn player-id
+  [world]
+  (:entity/id (player-entity world)))
+
 (defn player-pos
   [world]
   (:pos (player-entity world)))

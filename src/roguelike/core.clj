@@ -23,7 +23,7 @@
     (if (= status :awaiting-input)
       (let [key-event    (input/read-key screen)
             action       (input/key->action key-event (:mode (:ui game)))
-            updated-game (game/update-game game action)]
+            updated-game (game/player-action game action)]
         (when (not= (get-in updated-game [:ui :mode :screen]) :quit)
           (recur (game/advance updated-game))))
       (recur (game/advance game)))))

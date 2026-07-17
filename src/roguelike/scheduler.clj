@@ -17,7 +17,7 @@
   [world actor-id action]
   (let [[new-world events] (world/update-world world actor-id action)
         rescheduled-world (reschedule new-world actor-id (cost-of action))]
-    [rescheduled-world events]))
+    [rescheduled-world events :acted]))
 
 (defn next-scheduled
   "Looks at a world and returns what is next up in the event scheduler. It could be the player, an entity,
@@ -39,6 +39,14 @@
         actors (map make-scheduled-actor (world/active-actors world))
         with-tick (conj actors {:kind :tick :at (:next-tick world)})]
     (reduce reducer with-tick)))
+
+(defn player-action
+  [world action]
+  (let [scheduled (next-scheduled world)]
+    (when (not (and (= :actor (:kind scheduled))
+                    (world/player? world (:entity/id scheduled))))
+      (ex-info "player-action called on an entity that is not the player" {:scheduled scheduled}))
+    (resolve-action world (world/player-id world) action)))
 
 (defn tick-world
   [world]

@@ -10,14 +10,17 @@
 
 (defn advance
   [game]
-  (let [[new-world _ status] (scheduler/advance (:world game))]
-    [(assoc game :world new-world) status]))
+  (let [[new-world events status] (scheduler/advance (:world game))]
+    [(-> game
+         (assoc :world new-world)
+         (update :ui ui/apply-events events))
+     status]))
 
-(defn update-game
+(defn player-action
   [game action]
   (case (namespace (:action/type action))
     "world"
-    (let [[new-world events] (scheduler/resolve-action (:world game) 0 action)
+    (let [[new-world events] (scheduler/player-action (:world game) action)
           new-ui             (ui/apply-events (:ui game) events)]
       (-> game
           (assoc :world new-world)

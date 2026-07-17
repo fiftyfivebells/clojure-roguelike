@@ -1,5 +1,5 @@
 (ns roguelike.ai
-  [:require [roguelike.rng :as rng]])
+  (:require [roguelike.rng :as rng]))
 
 (def ^:private directions
   [[-1 -1] [0 -1] [1 -1]
