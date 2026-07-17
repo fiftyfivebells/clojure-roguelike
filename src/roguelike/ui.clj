@@ -46,7 +46,9 @@
 (defn apply-event
   [ui event]
   (case (:event/type event)
-    :world/blocked (add-message ui (blocked-message (:by event)))
+    :world/blocked (if (:player? event)
+                     (add-message ui (blocked-message (:by event)))
+                     ui)
 
     ;; default case
     ui))

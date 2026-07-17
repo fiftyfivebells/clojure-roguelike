@@ -133,10 +133,11 @@
 (defn attempt-movement
   [world actor-id delta]
   (let [new-pos (get-proposed-coords world actor-id delta)
-        destination (classify-destination world new-pos)]
+        destination (classify-destination world new-pos)
+        player? (player? world actor-id)]
     (if (= destination :passable)
-      [(move-actor world actor-id new-pos) [{:event/type :world/moved}]]
-      [world [{:event/type :world/blocked :by destination}]])))
+      [(move-actor world actor-id new-pos) [{:event/type :world/moved :player? player?}]]
+      [world [{:event/type :world/blocked :by destination :player? player?}]])))
 
 (defn update-world
   [world actor-id action]
