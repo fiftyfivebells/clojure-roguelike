@@ -28,7 +28,7 @@
   This gives a priority (everything else equal) of player -> monster -> tick."
   [world]
   (let [make-scheduled-actor (fn [{:keys [entity/id next-time]}] {:kind :actor :entity/id id :at next-time})
-        priority (fn [{:keys [kind at id]}]
+        priority (fn [{:keys [kind at entity/id]}]
                    [at
                     (if (= kind :actor) 0 1)
                     (or id 0)])
