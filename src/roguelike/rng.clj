@@ -54,5 +54,5 @@
   [state min-val max-val]
   (let [[next-state normalized] (rand-double state)
         span (- max-val min-val)
-        value (int (+ min-val (* normalized span)))]
+        value (long (Math/floor (+ min-val (* normalized span))))]
     [next-state value]))
