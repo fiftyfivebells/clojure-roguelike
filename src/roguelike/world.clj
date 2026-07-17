@@ -17,7 +17,7 @@
 (defn spawn-entity
   [world]
   (let [[next-id next-world] (allocate-entity-id world)
-        monster {:id next-id :glyph \m :type :generic-monster :pos [15 15] :next-time (:current-time next-world)}]
+        monster {:entity/id next-id :glyph \m :entity/type :generic-monster :pos [15 15] :next-time (:current-time next-world)}]
     (update next-world :current-level level/add-entity monster)))
 
 ;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
@@ -27,7 +27,7 @@
   ([]
    (new-world 123456789))  ;; just some default seed
   ([seed]
-   (let [world {:player {:id 0 :glyph \@ :type :player :pos [10 12] :next-time 0}
+   (let [world {:player {:entity/id 0 :glyph \@ :entity/type :player :pos [10 12] :next-time 0}
                 :current-level (level/test-level)
                 :levels        []
                 :next-entity-id 1
@@ -52,7 +52,7 @@
 (defn player?
   [world id]
   (let [player (:player world)]
-    (= id (:id player))))
+    (= id (:entity/id player))))
 
 (defn active-actors
   "Gets a list of all active entities in the current level. Essentially just conjs the player onto the list
@@ -90,8 +90,8 @@
     (assoc tile :pos [x y])))
 
 (defn get-proposed-coords
-  "Takes in a world, actor-id, and an [x y] delta. Then it finds the actor using the id and creates proposed
-  coords based on the provided delta. Gives back the new coords."
+  "Takes in a world, actor-id, and an [x y] delta. Then it finds the actor using the id and creates
+  proposed coords based on the provided delta. Gives back the new coords."
   [world actor-id delta]
   (let [[x y] delta
         actor (get-actor world actor-id)
@@ -124,18 +124,14 @@
   (let [new-pos (get-proposed-coords world actor-id delta)
         destination (classify-destination world new-pos)]
     (if (= destination :passable)
-      [(move-actor world actor-id new-pos) [{:type :moved}]]
-      [world [{:type :blocked :by destination}]])))
+      [(move-actor world actor-id new-pos) [{:event/type :world/moved}]]
+      [world [{:event/type :world/blocked :by destination}]])))
 
 (defn update-world
   [world actor-id action]
-  (case (:type action)
+  (case (:action/type action)
     :world/move (attempt-movement world actor-id (:delta action))
     :world/wait [world []]
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))
-
-
-
-

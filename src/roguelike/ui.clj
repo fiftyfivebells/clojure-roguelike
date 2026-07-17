@@ -8,7 +8,7 @@
 
 (defn update-mode
   [ui action]
-  (case (:type action)
+  (case (:action/type action)
     :ui/prompt
     (let [{:keys [message on-yes return]} action]
       (assoc ui :mode {:screen :prompt
@@ -40,13 +40,13 @@
     "Something's in your way."))
 ;; what is an event?
 ;; proposed shape:
-;; :type -> the event type
+;; :event/type -> the event type
 ;; TODO: what other things might be needed?
 ;;       not sure, but it'll probably become clearer as more events get added here
 (defn apply-event
   [ui event]
-  (case (:type event)
-    :blocked (add-message ui (blocked-message (:by event)))
+  (case (:event/type event)
+    :world/blocked (add-message ui (blocked-message (:by event)))
 
     ;; default case
     ui))

@@ -15,7 +15,7 @@
 
 (defn update-game
   [game action]
-  (case (namespace (:type action))
+  (case (namespace (:action/type action))
     "world"
     (let [[new-world events] (scheduler/resolve-action (:world game) 0 action)
           new-ui             (ui/apply-events (:ui game) events)]

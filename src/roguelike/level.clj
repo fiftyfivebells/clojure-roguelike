@@ -1,9 +1,9 @@
 (ns roguelike.level)
 
 (def tile-types
-  {:wall  {:type :wall         :glyph \#}
-   :floor {:type :floor        :glyph \.}
-   :door  {:type :closed-door  :glyph \+ :open? false :locked? false}})
+  {:wall  {:tile/type :wall         :glyph \#}
+   :floor {:tile/type :floor        :glyph \.}
+   :door  {:tile/type :closed-door  :glyph \+ :open? false :locked? false}})
 
 
 ;; level is a map of keys
@@ -67,9 +67,9 @@
 (defn classify-tile
   "Returns the semantic classification of a tile: :floor, :wall, :closed-door, :open-door,
   or :unknown for an unrecognized tile type. This should be the one place that translates a
-  tile's raw :type into the vocabulary callers should build on."
+  tile's raw :tile/type into the vocabulary callers should build on."
   [tile]
-  (case (:type tile)
+  (case (:tile/type tile)
     :wall        :wall
     :floor       :floor
     :closed-door (if (:open? tile) :open-door :closed-door)
@@ -95,13 +95,13 @@
 (defn add-entity
   "Places the given entity into the given level."
   [level entity]
-  (assoc-in level [:entities (:id entity)] entity))
+  (assoc-in level [:entities (:entity/id entity)] entity))
 
 (defn- assert-entity-exists!
   [level entity-id]
   (when (nil? (get-entity level entity-id))
     (throw (ex-info "provided entity id does not exist"
-                    {:id entity-id}))))
+                    {:entity/id entity-id}))))
 
 (defn remove-entity
   "Removes the entity associated with the given entity-id from the given level."

@@ -4,7 +4,7 @@
 
 (defn- cost-of
   [action]
-  (case (:type action)
+  (case (:action/type action)
     :world/move 10
     :world/wait 10
     (throw (ex-info "this action doesn't exist" {:action action}))))
@@ -27,7 +27,7 @@
     - between actors, lowest id wins always
   This gives a priority (everything else equal) of player -> monster -> tick."
   [world]
-  (let [make-scheduled-actor (fn [{:keys [id next-time]}] {:kind :actor :id id :at next-time})
+  (let [make-scheduled-actor (fn [{:keys [entity/id next-time]}] {:kind :actor :entity/id id :at next-time})
         priority (fn [{:keys [kind at id]}]
                    [at
                     (if (= kind :actor) 0 1)
@@ -60,10 +60,10 @@
     (cond
       (= (:kind scheduled) :tick) [(tick-world next-world) [] :ticked]
 
-      (world/player? world (:id scheduled)) [next-world [] :awaiting-input]
+      (world/player? world (:entity/id scheduled)) [next-world [] :awaiting-input]
 
       ;; else branch: decide the entity's next action and resolve it
       :else
-      (let [[new-rng action] (ai/decide (:rng-state next-world) next-world (:id scheduled))
+      (let [[new-rng action] (ai/decide (:rng-state next-world) next-world (:entity/id scheduled))
             next-world (assoc next-world :rng-state new-rng)]
-        (resolve-action next-world (:id scheduled) action)))))
+        (resolve-action next-world (:entity/id scheduled) action)))))

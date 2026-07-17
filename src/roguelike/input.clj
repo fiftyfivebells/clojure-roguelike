@@ -15,22 +15,22 @@
   [key-event]
   (cond
     (and (:ctrl? key-event) (= (:key key-event) \x))
-    {:type :ui/prompt
+    {:action/type :ui/prompt
      :message "Really quit? (y to confirm, any other key to cancel)"
-     :on-yes {:type :ui/quit}
+     :on-yes {:action/type :ui/quit}
      :return {:screen :play}}
 
-    (= (:key key-event) \h) {:type :world/move :delta [-1 0]}
-    (= (:key key-event) \y) {:type :world/move :delta [-1 -1]}
-    (= (:key key-event) \b) {:type :world/move :delta [-1 1]}
-    (= (:key key-event) \n) {:type :world/move :delta [1 1]}
-    (= (:key key-event) \u) {:type :world/move :delta [1 -1]}
-    (= (:key key-event) \l) {:type :world/move :delta [1 0]}
-    (= (:key key-event) \j) {:type :world/move :delta [0 1]}
-    (= (:key key-event) \k) {:type :world/move :delta [0 -1]}
-    (= (:key key-event) \.) {:type :world/wait}
+    (= (:key key-event) \h) {:action/type :world/move :delta [-1 0]}
+    (= (:key key-event) \y) {:action/type :world/move :delta [-1 -1]}
+    (= (:key key-event) \b) {:action/type :world/move :delta [-1 1]}
+    (= (:key key-event) \n) {:action/type :world/move :delta [1 1]}
+    (= (:key key-event) \u) {:action/type :world/move :delta [1 -1]}
+    (= (:key key-event) \l) {:action/type :world/move :delta [1 0]}
+    (= (:key key-event) \j) {:action/type :world/move :delta [0 1]}
+    (= (:key key-event) \k) {:action/type :world/move :delta [0 -1]}
+    (= (:key key-event) \.) {:action/type :world/wait}
 
-    :else {:type :ui/none}))
+    :else {:action/type :ui/none}))
 
 (defn prompt-mode
   "Prompt mode input handler. When the world is in :prompt mode, it reads the key input from the terminal.
@@ -39,7 +39,7 @@
   [key-event mode]
   (if (= (:key key-event) \y)
     (:on-yes mode)
-    {:type :ui/return}))
+    {:action/type :ui/return}))
 
 (defn key->action
   "Dispatcher: depending on the screen that the world's mode is set to, it delegates to the appropriate

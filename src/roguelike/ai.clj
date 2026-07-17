@@ -10,6 +10,6 @@
   [rng-state world actor-id]
   (let [[rng-state val] (rng/rand-int-range rng-state 0 (inc (count directions)))
         action (if (>= val (count directions))
-                 {:type :world/wait}
-                 {:type :world/move :delta (nth directions val)})]
+                 {:action/type :world/wait}
+                 {:action/type :world/move :delta (nth directions val)})]
     [rng-state action]))
