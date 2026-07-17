@@ -1,6 +1,5 @@
 (ns roguelike.world
-  (:require [roguelike.ai :as ai]
-            [roguelike.level :as level]
+  (:require [roguelike.level :as level]
             [roguelike.rng :as rng]))
 
 (def entity-glyphs
