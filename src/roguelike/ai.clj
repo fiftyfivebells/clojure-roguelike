@@ -7,9 +7,8 @@
    [-1  1] [0  1] [1  1]])
 
 (defn decide
-  [rng-state world actor-id]
-  (let [[rng-state val] (rng/rand-int-range rng-state 0 (inc (count directions)))
-        action (if (>= val (count directions))
-                 {:action/type :world/wait}
-                 {:action/type :world/move :delta (nth directions val)})]
-    [rng-state action]))
+  [world actor-id]
+  (let [make-action (fn [dir] {:action/type :world/move :delta dir})
+        actions (map make-action directions)
+        [world action] (rng/draw-nth world actions)]
+    [world action]))

@@ -164,7 +164,7 @@
   (let [player  (make-player {:next-time 1000})
         monster (make-monster 1 {:next-time 5 :pos [1 1]})
         w       (make-world :player player :monsters [monster] :next-tick 1000 :current-time 0)]
-    (with-redefs [ai/decide (fn [rng-state _ _] [rng-state {:action/type :world/wait}])]
+    (with-redefs [ai/decide (fn [world _] [world {:action/type :world/wait}])]
       (let [result (scheduler/advance w)]
         (let [[new-world events status] result]
           (is (= :acted status))
@@ -176,7 +176,7 @@
   (let [player  (make-player {:next-time 1000})
         monster (make-monster 1 {:next-time 5 :pos [1 1]})
         w       (make-world :player player :monsters [monster] :next-tick 1000 :current-time 0)]
-    (with-redefs [ai/decide (fn [rng-state _ _] [rng-state {:action/type :world/move :delta [1 0]}])]
+    (with-redefs [ai/decide (fn [world _] [world {:action/type :world/move :delta [1 0]}])]
       (let [[new-world events] (scheduler/advance w)]
         (is (= [{:event/type :world/moved :player? false}] events))
         (is (= [2 1] (:pos (level/get-entity (:current-level new-world) 1))))))))
@@ -186,6 +186,6 @@
         monster       (make-monster 1 {:next-time 5 :pos [1 1]})
         w             (make-world :player player :monsters [monster] :next-tick 1000 :current-time 0)
         sentinel-state [9 9 9 9]]
-    (with-redefs [ai/decide (fn [_ _ _] [sentinel-state {:action/type :world/wait}])]
+    (with-redefs [ai/decide (fn [world _] [(assoc world :rng-state sentinel-state) {:action/type :world/wait}])]
       (let [[new-world _] (scheduler/advance w)]
         (is (= sentinel-state (:rng-state new-world)))))))

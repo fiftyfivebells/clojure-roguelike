@@ -73,7 +73,6 @@
 
       ;; else branch: decide the entity's next action and resolve it
       :else
-      (let [[new-rng action] (ai/decide (:rng-state next-world) next-world (:entity/id scheduled))
-            next-world (assoc next-world :rng-state new-rng)
+      (let [[next-world action] (ai/decide next-world (:entity/id scheduled))
             [resolved-world events] (resolve-action next-world (:entity/id scheduled) action)]
         [resolved-world events :acted]))))

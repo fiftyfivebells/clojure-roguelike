@@ -13,6 +13,8 @@
 ;; takes in a state and returns the new state and the output
 ;; the new state is a length 4 vector [a b c d] where each value is a 32-bit int
 ;; output is the next random number from the generator
+;; this is only public for tests, it should be left alone and callers use the
+;; convenience functions to get their random numbers and new states
 (defn next-rng-state
   [state]
   (let [[a b c d] state
@@ -40,19 +42,43 @@
         step (fn [state _] (first (next-rng-state state)))]
     (reduce step initial-state (range warmup-iterations))))
 
-(defn rand-double
+(defn- rand-double
   "Takes an RNG state and returns a random double between 0.0 (inclusive) and 1.0 (exclusive)."
   [state]
   (let [[next-state output] (next-rng-state state)
         normalized (/ output (double 0x100000000))]
     [next-state normalized]))
 
-(defn rand-int-range
+(defn- rand-int-range
   "Takes a state and a min and max val, then returns a new state along with a random integer
-  that is within the provided range. The max val is EXCLUSIVE of the value. If you want the range
+  that is within the provided range. The max val is exclusive of the value. If you want the range
   1-100 to include 100, you need to pass 101 as the max."
   [state min-val max-val]
   (let [[next-state normalized] (rand-double state)
         span (- max-val min-val)
         value (long (Math/floor (+ min-val (* normalized span))))]
     [next-state value]))
+
+(defn draw-double
+  "Takes an rng holder (any map with a :rng-state key, ie. a world or level) and returns
+  [holder value], where value is a random double in [0.0, 1.0) and holder has its :rng-state
+  advanced."
+  [holder]
+  (let [[state value] (rand-double (:rng-state holder))]
+    [(assoc holder :rng-state state) value]))
+
+(defn draw-int
+  "Takes an rng holder (any map with a :rng-state key, ie. a world or level) and a min and max
+  val, then returns [holder value], where value is a random integer in the provided range
+  (max-val exclusive) and holder has its :rng-state advanced."
+  [holder min-val max-val]
+  (let [[state value] (rand-int-range (:rng-state holder) min-val max-val)]
+    [(assoc holder :rng-state state) value]))
+
+(defn draw-nth
+  "Takes an rng-holder (any map with an :rng-state key, ie. a world of level) and a collection,
+  then returns [holder elem], where elem is a random element from inside the collection and holder
+  has its :rng-state advanced."
+  [holder coll]
+  (let [[next-holder val] (draw-int holder 0 (count coll))]
+    [next-holder (nth coll val)]))

@@ -24,7 +24,10 @@
 (defn spawn-entity
   [world]
   (let [[next-id next-world] (allocate-entity-id world)
-        monster {:entity/id next-id :entity/type :generic-monster :pos [15 15] :next-time (:current-time next-world)}]
+        monster {:entity/id next-id
+                 :entity/type :generic-monster
+                 :pos [15 15]
+                 :next-time (:current-time next-world)}]
     (update next-world :current-level level/add-entity monster)))
 
 ;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
