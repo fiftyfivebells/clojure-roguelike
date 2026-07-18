@@ -70,14 +70,14 @@
   (let [w                  (make-world :current-time 0)
         [new-world events] (scheduler/resolve-action w 0 {:action/type :world/move :delta [1 0]})]
     (is (= [2 1] (:pos (:player new-world))))
-    (is (= [{:event/type :world/moved}] events))
+    (is (= [{:event/type :world/moved :player? true}] events))
     (is (= 10 (:next-time (:player new-world))))))
 
 (deftest resolve-action-move-blocked-still-reschedules
   (let [w                  (make-world :player (make-player {:pos [1 1]}) :current-time 0)
         [new-world events] (scheduler/resolve-action w 0 {:action/type :world/move :delta [-1 0]})]
     (is (= [1 1] (:pos (:player new-world))) "actor did not move, blocked by wall")
-    (is (= [{:event/type :world/blocked :by :wall}] events))
+    (is (= [{:event/type :world/blocked :by :wall :player? true}] events))
     (is (= 10 (:next-time (:player new-world))) "cost is still applied even though the move failed")))
 
 (deftest resolve-action-unknown-action-throws
@@ -178,7 +178,7 @@
         w       (make-world :player player :monsters [monster] :next-tick 1000 :current-time 0)]
     (with-redefs [ai/decide (fn [rng-state _ _] [rng-state {:action/type :world/move :delta [1 0]}])]
       (let [[new-world events] (scheduler/advance w)]
-        (is (= [{:event/type :world/moved}] events))
+        (is (= [{:event/type :world/moved :player? false}] events))
         (is (= [2 1] (:pos (level/get-entity (:current-level new-world) 1))))))))
 
 (deftest advance-monster-turn-carries-updated-rng-state-into-world
