@@ -1,6 +1,8 @@
 (ns roguelike.world
-  (:require [roguelike.level :as level]
-            [roguelike.rng :as rng]))
+  (:require [roguelike.knowledge :as knowledge]
+            [roguelike.level :as level]
+            [roguelike.rng :as rng]
+            [roguelike.fov :as fov]))
 
 (def entity-glyphs
   {:player          \@
@@ -27,6 +29,7 @@
         monster {:entity/id next-id
                  :entity/type :generic-monster
                  :pos [15 15]
+                 :sight/radius 4  ;; TODO: just a random magic number, fix to be more robust later
                  :next-time (:current-time next-world)}]
     (update next-world :current-level level/add-entity monster)))
 
@@ -37,7 +40,11 @@
   ([]
    (new-world 123456789))  ;; just some default seed
   ([seed]
-   (let [world {:player {:entity/id 0 :entity/type :player :pos [10 12] :next-time 0}
+   (let [world {:player {:entity/id 0
+                         :entity/type :player
+                         :pos [10 12]
+                         :sight/radius 4  ;; TODO: just a random magic number, fix to be more robust later
+                         :next-time 0}
                 :current-level (level/test-level)
                 :levels        []
                 :next-entity-id 1
@@ -95,6 +102,54 @@
     (if (= player-pos [x y])
       player
       (level/entity-at (:current-level world) [x y]))))
+
+;; FOV
+
+(defn sight-radius
+  "Returns the sight-radius for actor with the provided actor-id."
+  [world actor-id]
+  (let [actor (get-actor world actor-id)]
+    (:sight/radius actor)))
+
+(defn visible-cells
+  "Takes a world and sight-radius and returns a set of tiles visible from the "
+  [world actor-id radius]
+  (let [opaque? (partial level/opaque-at? (:current-level world))]
+    (fov/visible-cells opaque? (player-pos world) radius)))
+
+(defn observe
+  [world]
+  (let [radius (sight-radius world (player-id world))
+        visible (visible-cells world (player-id world) radius)
+        new-level (level/remember-visible (:current-level world) visible)]
+    (assoc world :current-level new-level)))
+
+
+(defn level-view
+  [world]
+  (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))
+        curr-lvl (:current-level world)
+        known   (level/known-tiles curr-lvl)
+        classifier (fn [tile]
+                     (let [pos (:pos tile)]
+                       (cond
+                         (contains? visible pos)
+                         {:pos pos
+                          :state :visible
+                          :tile (level/classify-tile (level/tile-at curr-lvl pos))}
+
+                         (knowledge/seen? known pos)
+                         {:pos pos
+                          :state :remembered
+                          :tile (level/classify-tile (knowledge/remembered-tile known pos))}
+
+                         :else
+                         {:pos pos
+                          :state :unknown
+                          :tile :unknown})))]
+    (map classifier (level/level->tile-list curr-lvl))))
+
+;; Tiles
 
 (defn tile-at
   "Takes in a world and coords, then dispatches to the tile-at function in the level namespace using the

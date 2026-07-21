@@ -109,6 +109,27 @@
 (deftest is-passable-open-door
   (is (true? (level/passable? (assoc door :open? true)))))
 
+;;; is-transparent?
+
+(deftest is-transparent-wall
+  (is (false? (level/transparent? wall))))
+
+(deftest is-transparent-floor
+  (is (true? (level/transparent? floor))))
+
+(deftest is-transparent-closed-door
+  (is (false? (level/transparent? door))))
+
+(deftest is-transparent-open-door
+  (is (true? (level/transparent? (assoc door :open? true)))))
+
+;;; opaque-at?
+
+(deftest is-opaque-out-of-bounds-and-wall
+  (let [lvl (make-level-filled 5 4 wall)]
+    (is (true? (level/opaque-at? lvl [6 6])))
+    (is (true? (level/opaque-at? lvl [0 0])))))
+
 ;;; Property-based tests
 
 (def gen-dims
@@ -127,9 +148,9 @@
 
 (defspec set-then-get-roundtrips 200
   (prop/for-all [{:keys [w h x y]} gen-level-with-coord]
-    (let [lvl    (make-level w h)
-          result (level/set-tile lvl [x y] wall)]
-      (= wall (level/tile-at result [x y])))))
+                (let [lvl    (make-level w h)
+                      result (level/set-tile lvl [x y] wall)]
+                  (= wall (level/tile-at result [x y])))))
 
 (def gen-non-square-level-with-coord
   (gen/bind (gen/such-that (fn [[w h]] (not= w h)) gen-dims)
@@ -141,9 +162,9 @@
 
 (defspec set-then-get-roundtrips-non-square 200
   (prop/for-all [{:keys [w h x y]} gen-non-square-level-with-coord]
-    (let [lvl    (make-level w h)
-          result (level/set-tile lvl [x y] wall)]
-      (= wall (level/tile-at result [x y])))))
+                (let [lvl    (make-level w h)
+                      result (level/set-tile lvl [x y] wall)]
+                  (= wall (level/tile-at result [x y])))))
 
 (def gen-level-with-oob-coord
   "Generates {:w :h :x :y} where [x y] is guaranteed out-of-bounds."
@@ -161,26 +182,26 @@
 
 (defspec out-of-bounds-always-throws 200
   (prop/for-all [{:keys [w h x y]} gen-level-with-oob-coord]
-    (try
-      (level/tile-at (make-level w h) [x y])
-      false
-      (catch clojure.lang.ExceptionInfo _ true))))
+                (try
+                  (level/tile-at (make-level w h) [x y])
+                  false
+                  (catch clojure.lang.ExceptionInfo _ true))))
 
 (defspec in-bounds-never-throws 200
   (prop/for-all [[w h] gen-dims]
-    (let [lvl (make-level w h)]
-      (every? (fn [[x y]] (= floor (level/tile-at lvl [x y])))
-              (for [x (range w) y (range h)] [x y])))))
+                (let [lvl (make-level w h)]
+                  (every? (fn [[x y]] (= floor (level/tile-at lvl [x y])))
+                          (for [x (range w) y (range h)] [x y])))))
 
 (defspec set-tile-is-pure 200
   (prop/for-all [[w h] gen-dims]
-    (let [lvl (make-level w h)
-          _   (level/set-tile lvl [0 0] wall)]
-      (= floor (level/tile-at lvl [0 0])))))
+                (let [lvl (make-level w h)
+                      _   (level/set-tile lvl [0 0] wall)]
+                  (= floor (level/tile-at lvl [0 0])))))
 
 (defspec update-tile-identity-is-noop 200
   (prop/for-all [{:keys [w h x y]} gen-level-with-coord]
-    (let [lvl    (make-level w h)
-          result (level/update-tile lvl [x y] identity)]
-      (= (level/tile-at lvl [x y])
-         (level/tile-at result [x y])))))
+                (let [lvl    (make-level w h)
+                      result (level/update-tile lvl [x y] identity)]
+                  (= (level/tile-at lvl [x y])
+                     (level/tile-at result [x y])))))
