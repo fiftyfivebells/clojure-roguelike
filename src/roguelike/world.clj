@@ -4,13 +4,9 @@
             [roguelike.rng :as rng]
             [roguelike.fov :as fov]))
 
-(def entity-glyphs
-  {:player          \@
-   :generic-monster \m})
-
-(defn glyph-for
+(defn entity-type
   [entity]
-  (get entity-glyphs (:entity/type entity)))
+  (:entity/type entity))
 
 (defn- allocate-entity-id
   [world]
@@ -124,6 +120,20 @@
         new-level (level/remember-visible (:current-level world) visible)]
     (assoc world :current-level new-level)))
 
+(defn can-see?
+  [world from-id to-pos]
+  (let [from (get-actor world from-id)
+        radius (sight-radius world from-id)
+        opaque? (partial level/opaque-at? (:current-level world))
+        visible (fov/visible-cells opaque? (:pos from) radius)]
+    (contains? visible to-pos)))
+
+(defn visible-actors
+  "Gets a list of active entities in the current level whose position is currently visible to the
+  player (per FOV), so monsters outside the player's sight radius don't render."
+  [world]
+  (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))]
+    (filter #(contains? visible (:pos %)) (active-actors world))))
 
 (defn level-view
   [world]
