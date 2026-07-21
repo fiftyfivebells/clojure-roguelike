@@ -30,10 +30,3 @@
     (if (world/can-see? world actor-id player-pos)
       (chase world monster player-pos)
       (wander world))))
-
-;; (defn decide
-;;   [world actor-id]
-;;   (let [make-action (fn [dir] {:action/type :world/move :delta dir})
-;;         actions (map make-action directions)
-;;         [world action] (rng/draw-nth world actions)]
-;;     [world action]))

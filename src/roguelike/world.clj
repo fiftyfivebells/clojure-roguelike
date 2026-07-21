@@ -49,11 +49,6 @@
                 :rng-state (rng/make seed)}]
      (spawn-entity world))))
 
-(defn current-level->tile-list
-  "Takes a world and gives back a list of every tile in the current level along with its [x y] position."
-  [world]
-  (level/level->tile-list (:current-level world)))
-
 (defn player-entity
   [world]
   (:player world))
@@ -191,7 +186,7 @@
   [world [x y]]
   (if (entity-at world [x y])
     :actor
-    (case (level/classify-tile (level/tile-at (:current-level world) [x y]))
+    (case (level/classify-tile (tile-at world [x y]))
       :floor       :passable
       :open-door   :passable
       :wall        :wall
