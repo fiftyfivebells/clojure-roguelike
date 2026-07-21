@@ -13,6 +13,8 @@
 ;;   [. . . .]
 ;;   [. . . .]]
 
+;; Bounds
+
 (defn level-dimensions
   [level]
   (let [tiles (:tiles level)
@@ -160,7 +162,7 @@
   [level]
   (get level :known))
 
-;; Whole level functions
+;; Construction
 
 (defn test-level
   ([]
@@ -177,6 +179,8 @@
      {:tiles tiles
       :entities {}
       :known (knowledge/empty-knowledge)})))  ;; TODO: update this to actually fill with monsters eventually
+
+;; Traversal
 
 (defn level->tile-list
   "Converts a level into a list of tiles and their (x, y) coordinates. This

@@ -4,9 +4,7 @@
             [roguelike.rng :as rng]
             [roguelike.fov :as fov]))
 
-(defn entity-type
-  [entity]
-  (:entity/type entity))
+;; World Construction
 
 (defn- allocate-entity-id
   [world]
@@ -48,6 +46,12 @@
                 :current-time 0
                 :rng-state (rng/make seed)}]
      (spawn-entity world))))
+
+;; Actors
+
+(defn entity-type
+  [entity]
+  (:entity/type entity))
 
 (defn player-entity
   [world]
@@ -93,6 +97,15 @@
     (if (= player-pos [x y])
       player
       (level/entity-at (:current-level world) [x y]))))
+
+;; Tiles
+
+(defn tile-at
+  "Takes in a world and coords, then dispatches to the tile-at function in the level namespace using the
+  currently active level. Returns a map containing the tile at the coords and the x and y positions."
+  [world [x y]]
+  (let [tile (level/tile-at (:current-level world) [x y])]
+    (assoc tile :pos [x y])))
 
 ;; FOV
 
@@ -154,14 +167,7 @@
                           :tile :unknown})))]
     (map classifier (level/level->tile-list curr-lvl))))
 
-;; Tiles
-
-(defn tile-at
-  "Takes in a world and coords, then dispatches to the tile-at function in the level namespace using the
-  currently active level. Returns a map containing the tile at the coords and the x and y positions."
-  [world [x y]]
-  (let [tile (level/tile-at (:current-level world) [x y])]
-    (assoc tile :pos [x y])))
+;; Movement
 
 (defn get-proposed-coords
   "Takes in a world, actor-id, and an [x y] delta. Then it finds the actor using the id and creates
