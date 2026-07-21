@@ -1,10 +1,10 @@
-(ns roguelike.level)
+(ns roguelike.level
+  (:require [roguelike.knowledge :as knowledge]))
 
 (def tile-types
-  {:wall  {:tile/type :wall         :glyph \#}
-   :floor {:tile/type :floor        :glyph \.}
-   :door  {:tile/type :closed-door  :glyph \+ :open? false :locked? false}})
-
+  {:wall  {:tile/type :wall}
+   :floor {:tile/type :floor}
+   :door  {:tile/type :closed-door :open? false :locked? false}})
 
 ;; level is a map of keys
 ;; :entities is a map of entity-id -> entity
