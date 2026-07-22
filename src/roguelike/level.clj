@@ -10,7 +10,7 @@
 
 ;; Bounds
 
-(defn level-dimensions
+(defn dimensions
   [level]
   (let [tiles (:tiles level)
         width (count (first tiles))
@@ -19,7 +19,7 @@
 
 (defn- in-bounds?
   [level  [x y]]
-  (let [[width height] (level-dimensions level)]
+  (let [[width height] (dimensions level)]
     (and (< x width)
          (>= x 0)
          (< y height)
@@ -29,7 +29,7 @@
 (defn- assert-in-bounds!
   [level [x y]]
   (when (not (in-bounds? level [x y]))
-    (let [[width height] (level-dimensions level)]
+    (let [[width height] (dimensions level)]
       (throw (ex-info "tile coordinates are out of bounds"
                       {:x x :y y :width width :height height})))))
 
@@ -41,6 +41,8 @@
   [y x])
 
 ;; Tile functions
+;; a tile is a map. for now it looks like this:
+;; {:tile/type :wall}
 
 (defn tile-at
   "Getter for tiles."
@@ -48,9 +50,8 @@
   (get-in (:tiles level) (resolve-coords level [x y])))
 
 (defn set-tile
-  "Setter for tiles. Sets the tile in (level) at the provided coords ([x y])
-   using the provided function f. This is used for adding something new to the
-   level at [x y]."
+  "Setter for tiles. Sets the tile in (level) at the provided coords ([x y]).
+   This is used for adding something new to the level at [x y]."
   [level [x y] tile]
   (let [[new-y new-x] (resolve-coords level [x y])]
     (assoc-in level [:tiles new-y new-x] tile)))
