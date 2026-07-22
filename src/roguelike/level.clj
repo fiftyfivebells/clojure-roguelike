@@ -1,11 +1,6 @@
 (ns roguelike.level
   (:require [roguelike.knowledge :as knowledge]))
 
-(def tile-types
-  {:wall  {:tile/type :wall}
-   :floor {:tile/type :floor}
-   :door  {:tile/type :closed-door :open? false :locked? false}})
-
 ;; level is a map of keys
 ;; :entities is a map of entity-id -> entity
 ;; :tiles is a vector of vectors (3x4 example):
@@ -163,6 +158,39 @@
   (get level :known))
 
 ;; Construction
+
+(def ^:private tile-types
+  {:wall  {:tile/type :wall}
+   :floor {:tile/type :floor}
+   :door  {:tile/type :door :open? false :locked? false}})
+
+(defn floor
+  []
+  (:floor tile-types))
+
+(defn wall
+  []
+  (:wall tile-types))
+
+(defn door
+  ([] (:door tile-types))
+  ([{:keys [open? locked?] :or {open? false locked? false}}]
+   (merge (:door tile-types) {:open? open? :locked? locked?})))
+
+(defn set-rooms
+  [level rooms]
+  (assoc-in level [:rooms] rooms))
+
+(defn solid-level
+  ([]
+   (solid-level 80 22))
+  ([width height]
+   (let [tiles (vec (for [y (range height)]
+                      (vec (for [x (range width)]
+                             (:wall tile-types)))))]
+     {:tiles tiles
+      :entities {}
+      :known (knowledge/empty-knowledge)})))
 
 (defn test-level
   ([]
