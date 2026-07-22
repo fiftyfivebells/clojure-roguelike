@@ -55,8 +55,8 @@
     [[a b c d] output]))
 
 (defn- seed-to-initial-state
-  "Takes in an integer and spreads it to the 4 state values for use in the sfc32 algorithm.
-  Returns the state values as a vector [a b c d]."
+  "Takes in an integer and spreads it to the 4 state values for use in the sfc32
+   algorithm. Returns the state values as a vector [a b c d]."
   [seed]
   (let [a (fmix32 seed)
         b (fmix32 (bit-xor seed C1))
@@ -105,6 +105,8 @@
         value (long (Math/floor (+ min-val (* normalized span))))]
     [next-state value]))
 
+;; API
+
 (defn draw-double
   "Takes an rng holder (any map with a :rng-state key, ie. a world or level) and
    returns [holder value], where value is a random double in [0.0, 1.0) and
@@ -126,13 +128,13 @@
   "Specialized case of draw-int: returns either true or false to simulate a coin
    flip."
   [holder]
-  (let [[state value] (draw-int holder 0 2)]
-    [(assoc holder :rng-state state) (zero? value)]))
+  (let [[next-holder value] (draw-int holder 0 2)]
+    [next-holder (zero? value)]))
 
 (defn draw-nth
-  "Takes an rng-holder (any map with an :rng-state key, ie. a world of level) and a collection,
-  then returns [holder elem], where elem is a random element from inside the collection and holder
-  has its :rng-state advanced."
+  "Takes an rng-holder (any map with an :rng-state key, ie. a world of level) and
+   a collection, then returns [holder elem], where elem is a random element from
+   inside the collection and holder has its :rng-state advanced."
   [holder coll]
   (let [[next-holder val] (draw-int holder 0 (count coll))]
     [next-holder (nth coll val)]))
