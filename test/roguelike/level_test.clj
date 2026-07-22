@@ -20,22 +20,22 @@
   {:tiles (vec (for [_ (range height)]
                  (vec (repeat width tile))))})
 
-(def wall  (:wall  level/tile-types))
-(def floor (:floor level/tile-types))
-(def door  (:door  level/tile-types))
+;; (def wall  (:wall  level/tile-types))
+;; (def floor (:floor level/tile-types))
+;; (def door  (:door  level/tile-types))
 
 ;;; tile-at
 
 (deftest tile-at-returns-correct-tile
   (let [lvl (make-level 5 4)]
-    (is (= floor (level/tile-at lvl [0 0])))
-    (is (= floor (level/tile-at lvl [4 3])))))
+    (is (= (level/floor) (level/tile-at lvl [0 0])))
+    (is (= (level/floor) (level/tile-at lvl [4 3])))))
 
 (deftest tile-at-distinguishes-position
-  (let [lvl (-> (make-level-filled 5 4 wall)
-                (level/set-tile [2 1] floor))]
-    (is (= floor (level/tile-at lvl [2 1])))
-    (is (= wall  (level/tile-at lvl [0 0])))))
+  (let [lvl (-> (make-level-filled 5 4 (level/wall))
+                (level/set-tile [2 1] :floor))]
+    (is (= (level/floor) (level/tile-at lvl [2 1])))
+    (is (= (level/wall)  (level/tile-at lvl [0 0])))))
 
 (deftest tile-at-out-of-bounds-throws
   (let [lvl (make-level 5 4)]
@@ -60,29 +60,29 @@
 
 (deftest set-tile-replaces-tile
   (let [lvl    (make-level 5 4)
-        result (level/set-tile lvl [1 2] wall)]
-    (is (= wall  (level/tile-at result [1 2])))
-    (is (= floor (level/tile-at lvl   [1 2])) "original is unchanged")))
+        result (level/set-tile lvl [1 2] (level/wall))]
+    (is (= (level/wall)  (level/tile-at result [1 2])))
+    (is (= (level/floor) (level/tile-at lvl   [1 2])) "original is unchanged")))
 
 (deftest set-tile-only-affects-target-cell
   (let [lvl    (make-level 3 3)
-        result (level/set-tile lvl [1 1] wall)]
+        result (level/set-tile lvl [1 1] (level/wall))]
     (doseq [x (range 3)
             y (range 3)
             :when (not= [x y] [1 1])]
-      (is (= floor (level/tile-at result [x y]))))))
+      (is (= (level/floor) (level/tile-at result [x y]))))))
 
 (deftest set-tile-out-of-bounds-throws
   (let [lvl (make-level 5 4)]
-    (is (thrown? clojure.lang.ExceptionInfo (level/set-tile lvl [5 0] wall)))
-    (is (thrown? clojure.lang.ExceptionInfo (level/set-tile lvl [0 4] wall)))))
+    (is (thrown? clojure.lang.ExceptionInfo (level/set-tile lvl [5 0] (level/wall))))
+    (is (thrown? clojure.lang.ExceptionInfo (level/set-tile lvl [0 4] (level/wall))))))
 
 ;;; update-tile
 
 (deftest update-tile-applies-function
   (let [lvl    (make-level 3 3)
-        result (level/update-tile lvl [0 0] (fn [_] wall))]
-    (is (= wall (level/tile-at result [0 0])))))
+        result (level/update-tile lvl [0 0] (fn [_] (level/wall)))]
+    (is (= (level/wall) (level/tile-at result [0 0])))))
 
 (deftest update-tile-receives-current-tile
   (let [lvl    (make-level-filled 3 3 door)
@@ -98,10 +98,10 @@
 ;;; is-passable?
 
 (deftest is-passable-wall
-  (is (false? (level/passable? wall))))
+  (is (false? (level/passable? (level/wall)))))
 
 (deftest is-passable-floor
-  (is (true? (level/passable? floor))))
+  (is (true? (level/passable? (level/floor)))))
 
 (deftest is-passable-closed-door
   (is (false? (level/passable? door))))
@@ -112,10 +112,10 @@
 ;;; is-transparent?
 
 (deftest is-transparent-wall
-  (is (false? (level/transparent? wall))))
+  (is (false? (level/transparent? (level/wall)))))
 
 (deftest is-transparent-floor
-  (is (true? (level/transparent? floor))))
+  (is (true? (level/transparent? (level/floor)))))
 
 (deftest is-transparent-closed-door
   (is (false? (level/transparent? door))))
@@ -126,7 +126,7 @@
 ;;; opaque-at?
 
 (deftest is-opaque-out-of-bounds-and-wall
-  (let [lvl (make-level-filled 5 4 wall)]
+  (let [lvl (make-level-filled 5 4 (level/wall))]
     (is (true? (level/opaque-at? lvl [6 6])))
     (is (true? (level/opaque-at? lvl [0 0])))))
 
@@ -149,8 +149,8 @@
 (defspec set-then-get-roundtrips 200
   (prop/for-all [{:keys [w h x y]} gen-level-with-coord]
                 (let [lvl    (make-level w h)
-                      result (level/set-tile lvl [x y] wall)]
-                  (= wall (level/tile-at result [x y])))))
+                      result (level/set-tile lvl [x y] (level/wall))]
+                  (= (level/wall) (level/tile-at result [x y])))))
 
 (def gen-non-square-level-with-coord
   (gen/bind (gen/such-that (fn [[w h]] (not= w h)) gen-dims)
@@ -163,8 +163,8 @@
 (defspec set-then-get-roundtrips-non-square 200
   (prop/for-all [{:keys [w h x y]} gen-non-square-level-with-coord]
                 (let [lvl    (make-level w h)
-                      result (level/set-tile lvl [x y] wall)]
-                  (= wall (level/tile-at result [x y])))))
+                      result (level/set-tile lvl [x y] (level/wall))]
+                  (= (level/wall) (level/tile-at result [x y])))))
 
 (def gen-level-with-oob-coord
   "Generates {:w :h :x :y} where [x y] is guaranteed out-of-bounds."
@@ -190,14 +190,14 @@
 (defspec in-bounds-never-throws 200
   (prop/for-all [[w h] gen-dims]
                 (let [lvl (make-level w h)]
-                  (every? (fn [[x y]] (= floor (level/tile-at lvl [x y])))
+                  (every? (fn [[x y]] (= (level/floor) (level/tile-at lvl [x y])))
                           (for [x (range w) y (range h)] [x y])))))
 
 (defspec set-tile-is-pure 200
   (prop/for-all [[w h] gen-dims]
                 (let [lvl (make-level w h)
-                      _   (level/set-tile lvl [0 0] wall)]
-                  (= floor (level/tile-at lvl [0 0])))))
+                      _   (level/set-tile lvl [0 0] (level/wall))]
+                  (= (level/floor) (level/tile-at lvl [0 0])))))
 
 (defspec update-tile-identity-is-noop 200
   (prop/for-all [{:keys [w h x y]} gen-level-with-coord]
