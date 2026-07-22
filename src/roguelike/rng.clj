@@ -64,8 +64,9 @@
     [a b c 1]))
 
 (defn make
-  "'Warms up' the PRNG. Splits the seed into an initial state, generates an infinite sequence of states
-  then takes the 12th state. Returns the final state in a vector usable by next-rng-stage ([a b c d])."
+  "'Warms up' the PRNG. Splits the seed into an initial state, generates an
+   infinite sequence of states then takes the 12th state. Returns the final state
+   in a vector usable by next-rng-stage ([a b c d])."
   [seed]
   (let [initial-state (seed-to-initial-state seed)
         step (fn [state _] (first (next-rng-state state)))]
@@ -77,22 +78,27 @@
    :items  3})
 
 (defn mix
+  "Makes use of fmix32 to take a world-seed, stream key (like :layout or :spawn)
+   and a level-id and create a mixed up new integer to use for whatever purpose
+   the stream key requested. Returns a 32-bit integer that can be used as a seed."
   [world-seed stream-key level-id]
   (let [folded (bit-xor world-seed (mul32 (stream-code stream-key) C_stream))
         folded (bit-xor folded (mul32 level-id C_level))]
     (fmix32 folded)))
 
 (defn- rand-double
-  "Takes an RNG state and returns a random double between 0.0 (inclusive) and 1.0 (exclusive)."
+  "Takes an RNG state and returns a random double between 0.0 (inclusive) and 1.0
+ (exclusive)."
   [state]
   (let [[next-state output] (next-rng-state state)
         normalized (/ output (double 0x100000000))]
     [next-state normalized]))
 
 (defn- rand-int-range
-  "Takes a state and a min and max val, then returns a new state along with a random integer
-  that is within the provided range. The max val is exclusive of the value. If you want the range
-  1-100 to include 100, you need to pass 101 as the max."
+  "Takes a state and a min and max val, then returns a new state along with a
+   random integer that is within the provided range. The max val is exclusive of
+   the value. If you want the range 1-100 to include 100, you need to pass 101
+   as the max."
   [state min-val max-val]
   (let [[next-state normalized] (rand-double state)
         span (- max-val min-val)
@@ -100,20 +106,28 @@
     [next-state value]))
 
 (defn draw-double
-  "Takes an rng holder (any map with a :rng-state key, ie. a world or level) and returns
-  [holder value], where value is a random double in [0.0, 1.0) and holder has its :rng-state
-  advanced."
+  "Takes an rng holder (any map with a :rng-state key, ie. a world or level) and
+   returns [holder value], where value is a random double in [0.0, 1.0) and
+   holder has its :rng-state advanced."
   [holder]
   (let [[state value] (rand-double (:rng-state holder))]
     [(assoc holder :rng-state state) value]))
 
 (defn draw-int
-  "Takes an rng holder (any map with a :rng-state key, ie. a world or level) and a min and max
-  val, then returns [holder value], where value is a random integer in the provided range
-  (max-val exclusive) and holder has its :rng-state advanced."
+  "Takes an rng holder (any map with a :rng-state key, ie. a world or level) and
+   a min and max val, then returns [holder value], where value is a random int
+   in the provided range (max-val exclusive) and holder has its :rng-state
+   advanced."
   [holder min-val max-val]
   (let [[state value] (rand-int-range (:rng-state holder) min-val max-val)]
     [(assoc holder :rng-state state) value]))
+
+(defn draw-boolean
+  "Specialized case of draw-int: returns either true or false to simulate a coin
+   flip."
+  [holder]
+  (let [[state value] (draw-int holder 0 2)]
+    [(assoc holder :rng-state state) (zero? value)]))
 
 (defn draw-nth
   "Takes an rng-holder (any map with an :rng-state key, ie. a world of level) and a collection,
