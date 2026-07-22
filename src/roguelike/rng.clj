@@ -3,11 +3,39 @@
 (def ^:private mask-32 0xFFFFFFFF)
 (def ^:private warmup-iterations 12)
 
+;; constants to ensure good randomness, values suggested by claude
+(def ^:private C1 0x9E3779B9)  ;; golden ratio,  ⌊2^32 / φ⌋
+(def ^:private C2 0x6A09E667)  ;; fractional bits of √2  (SHA-256 H0)
+(def ^:private C_stream 0xBB67AE85) ;; fractional bits of √3   (odd, ends in 5)
+(def ^:private C_level 0xB7E15163) ;; fractional bits of e    (odd — plain e-constant
+
 (defn- rotate-left-32
   [x r]
   (bit-and mask-32
            (bit-or (bit-shift-left x r)
                    (unsigned-bit-shift-right x (- 32 r)))))
+
+;; TODO: this is the cljc version when this file is cross-compiled
+;; (defn- mul32
+;;   [a b]
+;;   #?(:clj  (bit-and mask-32 (unchecked-multiply a b))
+;;      :cljs (bit-and mask-32 (js/Math.imul a b))))
+(defn- mul32
+  [a b]
+  (bit-and mask-32 (unchecked-multiply a b)))
+
+(defn- fmix32
+  "Avalanche algorithm that mixes a 32-bit word up to ensure that even if the
+   bits weren't fully distributed to begin with, the output is adequately mixed
+   for randomness.
+   Source: https://github.com/aappleby/smhasher/blob/master/src/MurmurHash3.cpp"
+  [word]
+  (let [h (bit-xor word (unsigned-bit-shift-right word 16))
+        h (mul32 h 0x85ebca6b)
+        h (bit-xor h (unsigned-bit-shift-right h 13))
+        h (mul32 h 0x2b2ae35)
+        h (bit-xor h (unsigned-bit-shift-right h 16))]
+    h))
 
 ;; sfc32 algorithm
 ;; takes in a state and returns the new state and the output
@@ -27,12 +55,13 @@
     [[a b c d] output]))
 
 (defn- seed-to-initial-state
-  "Takes in a 64-bit integer and spreads it to the 4 state values for use in the sfc32 algorithm.
+  "Takes in an integer and spreads it to the 4 state values for use in the sfc32 algorithm.
   Returns the state values as a vector [a b c d]."
   [seed]
-  (let [top (unsigned-bit-shift-right seed 32)
-        bottom (bit-and seed mask-32)]
-    [0 top bottom 1]))
+  (let [a (fmix32 seed)
+        b (fmix32 (bit-xor seed C1))
+        c (fmix32 (bit-xor seed C2))]
+    [a b c 1]))
 
 (defn make
   "'Warms up' the PRNG. Splits the seed into an initial state, generates an infinite sequence of states
@@ -41,6 +70,17 @@
   (let [initial-state (seed-to-initial-state seed)
         step (fn [state _] (first (next-rng-state state)))]
     (reduce step initial-state (range warmup-iterations))))
+
+(def ^:private stream-code
+  {:layout 1
+   :spawn  2
+   :items  3})
+
+(defn mix
+  [world-seed stream-key level-id]
+  (let [folded (bit-xor world-seed (mul32 (stream-code stream-key) C_stream))
+        folded (bit-xor folded (mul32 level-id C_level))]
+    (fmix32 folded)))
 
 (defn- rand-double
   "Takes an RNG state and returns a random double between 0.0 (inclusive) and 1.0 (exclusive)."
