@@ -98,6 +98,11 @@
   (or (not (in-bounds? level [x y]))
       (not (transparent? (tile-at level [x y])))))
 
+(defn walkable-at?
+  [level [x y]]
+  (and (in-bounds? level [x y])
+       (passable? (tile-at level [x y]))))
+
 ;; Entity functions
 
 ;; TODO: keep an eye on sluggishness during turn updates. This is a scan of all entities every time.
