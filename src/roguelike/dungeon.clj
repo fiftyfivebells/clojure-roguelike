@@ -147,7 +147,7 @@
                                #(distance-sq (room-center current) (room-center %))
                                remaining)
                 ctx (carve-l-corridor ctx (room-center current) (room-center nearest))]
-            (recur nearest (remove #(identical? % nearest) remaining) ctx)))))))
+            (recur nearest (remove #(= % nearest) remaining) ctx)))))))
 
 (defn- neighbors
   [[x y]]
@@ -226,7 +226,7 @@
     (if (<= (count comps) 1)
       ctx
       (let [largest (largest-component comps)
-            others (remove #(identical? % largest) comps)]
+            others (remove #(= % largest) comps)]
         (reduce (fn [ctx comp]
                   (let [[a b] (nearest-pair largest comp)]
                     (carve-l-corridor ctx a b)))

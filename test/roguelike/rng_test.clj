@@ -1,6 +1,6 @@
 (ns roguelike.rng-test
   (:require [clojure.test :refer [deftest is testing]]
-            [roguelike.rng :refer [next-rng-state]]))
+            [roguelike.rng :as rng :refer [next-rng-state]]))
 
 (deftest test-sfc32-deterministic-sequence
   (testing "Sequence with initial state [0 0 0 1]"
