@@ -12,7 +12,7 @@
   "Build a level whose :tiles is a height x width grid filled with floor tiles."
   [width height]
   {:tiles (vec (for [_ (range height)]
-                 (vec (repeat width (:floor level/tile-types)))))})
+                 (vec (repeat width (level/floor)))))})
 
 (defn- make-level-filled
   "Build a level where every tile is f (a tile map)."
@@ -20,9 +20,7 @@
   {:tiles (vec (for [_ (range height)]
                  (vec (repeat width tile))))})
 
-;; (def wall  (:wall  level/tile-types))
-;; (def floor (:floor level/tile-types))
-;; (def door  (:door  level/tile-types))
+(def door (level/door))
 
 ;;; tile-at
 
@@ -33,7 +31,7 @@
 
 (deftest tile-at-distinguishes-position
   (let [lvl (-> (make-level-filled 5 4 (level/wall))
-                (level/set-tile [2 1] :floor))]
+                (level/set-tile [2 1] (level/floor)))]
     (is (= (level/floor) (level/tile-at lvl [2 1])))
     (is (= (level/wall)  (level/tile-at lvl [0 0])))))
 

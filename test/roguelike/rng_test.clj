@@ -71,3 +71,75 @@
                      ": " (format "0x%x" component))))
           (recur new-state (inc n)))
         nil))))
+
+;;; Mix Helpers
+
+(defn- hamming-distance
+  "Number of differing bits between two 32-bit values. A well-mixed avalanche
+   function should decorrelate similar inputs to an average distance of ~16
+   bits (half of 32) out of 32."
+  [a b]
+  (Long/bitCount (bit-xor a b)))
+
+(def ^:private sample-size 2000)
+
+;; sample-size draws of a well-mixed 32-bit avalanche should average close to
+;; 16 bits of difference; this range gives slack for sampling noise while
+;; still failing if outputs are correlated (e.g. off by a fixed small delta).
+(defn- assert-well-mixed
+  [avg]
+  (is (< 13.0 avg 19.0) (str "average hamming distance was " avg ", expected ~16")))
+
+;;; seed-to-initial-state
+
+(deftest seed-to-initial-state-counter-always-starts-at-one
+  (dotimes [i 20]
+    (is (= 1 (nth (#'rng/seed-to-initial-state i) 3)))))
+
+(deftest seed-to-initial-state-is-deterministic
+  (is (= (#'rng/seed-to-initial-state 42) (#'rng/seed-to-initial-state 42))))
+
+(deftest seed-to-initial-state-adjacent-seeds-are-decorrelated
+  (testing "component a (fmix32 seed) for adjacent seeds"
+    (let [distances (for [s (range sample-size)]
+                      (hamming-distance (nth (#'rng/seed-to-initial-state s) 0)
+                                        (nth (#'rng/seed-to-initial-state (inc s)) 0)))
+          avg (/ (reduce + distances) (double sample-size))]
+      (assert-well-mixed avg)))
+  (testing "component b (fmix32 (seed xor C1)) for adjacent seeds"
+    (let [distances (for [s (range sample-size)]
+                      (hamming-distance (nth (#'rng/seed-to-initial-state s) 1)
+                                        (nth (#'rng/seed-to-initial-state (inc s)) 1)))
+          avg (/ (reduce + distances) (double sample-size))]
+      (assert-well-mixed avg))))
+
+;;; mix
+
+(deftest mix-same-inputs-are-deterministic
+  (is (= (rng/mix 123 :layout 5) (rng/mix 123 :layout 5))))
+
+(deftest mix-returns-a-32-bit-value
+  (dotimes [i 200]
+    (is (<= 0 (rng/mix i :layout i) 0xFFFFFFFF))))
+
+(deftest mix-adjacent-level-ids-are-decorrelated
+  (let [seed 987654321
+        distances (for [lid (range sample-size)]
+                    (hamming-distance (rng/mix seed :layout lid)
+                                      (rng/mix seed :layout (inc lid))))
+        avg (/ (reduce + distances) (double sample-size))]
+    (assert-well-mixed avg)))
+
+(deftest mix-different-stream-keys-are-decorrelated
+  (let [distances (for [lid (range sample-size)]
+                    (hamming-distance (rng/mix 42 :layout lid)
+                                      (rng/mix 42 :spawn lid)))
+        avg (/ (reduce + distances) (double sample-size))]
+    (assert-well-mixed avg)))
+
+(deftest mix-different-world-seeds-are-decorrelated
+  (let [distances (for [seed (range sample-size)]
+                    (hamming-distance (rng/mix seed :layout 5)
+                                      (rng/mix (inc seed) :layout 5)))
+        avg (/ (reduce + distances) (double sample-size))]
+    (assert-well-mixed avg)))
