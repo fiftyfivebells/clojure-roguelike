@@ -33,7 +33,7 @@
   (let [h (bit-xor word (unsigned-bit-shift-right word 16))
         h (mul32 h 0x85ebca6b)
         h (bit-xor h (unsigned-bit-shift-right h 13))
-        h (mul32 h 0x2b2ae35)
+        h (mul32 h 0xc2b2ae35)
         h (bit-xor h (unsigned-bit-shift-right h 16))]
     h))
 
