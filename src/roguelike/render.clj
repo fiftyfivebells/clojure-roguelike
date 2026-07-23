@@ -15,10 +15,10 @@
    :green  TextColor$ANSI/GREEN})
 
 (def ^:private tile->glyph
-  {:wall    "#"
-   :floor   "."
-   :door    "+"
-   :unknown " "})
+  {:wall        "#"
+   :floor       "."
+   :closed-door "+"
+   :unknown     " "})
 
 (def ^:private entity->glyph
   {:player          "@"

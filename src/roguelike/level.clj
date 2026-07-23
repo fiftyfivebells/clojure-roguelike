@@ -76,7 +76,7 @@
   (case (:tile/type tile)
     :wall        :wall
     :floor       :floor
-    :closed-door (if (:open? tile) :open-door :closed-door)
+    :door (if (:open? tile) :open-door :closed-door)
     :unknown))
 
 (defn passable?
