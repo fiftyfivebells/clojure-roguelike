@@ -86,15 +86,15 @@
   [ctx]
   (loop [attempts-remaining 300
          ctx ctx]
-    (let [[ctx room] (propose-room ctx)]
-      (cond
-        (zero? attempts-remaining) ctx
-        (overlaps-any? ctx room) (recur (dec attempts-remaining) ctx)
-        :else
-        (let [new-level (stamp-floor (:level ctx) room)
-              rooms (conj (:rooms ctx) room)
-              ctx (assoc ctx :rooms rooms :level new-level)]
-          (recur (dec attempts-remaining) ctx))))))
+    (if (zero? attempts-remaining)
+      ctx
+      (let [[ctx room] (propose-room ctx)]
+        (if (overlaps-any? ctx room)
+          (recur (dec attempts-remaining) ctx)
+          (let [new-level (stamp-floor (:level ctx) room)
+                rooms (conj (:rooms ctx) room)
+                ctx (assoc ctx :rooms rooms :level new-level)]
+            (recur (dec attempts-remaining) ctx)))))))
 
 (defn- stamp-horizontal-corridor
   [ctx x1 x2 y]
@@ -117,7 +117,7 @@
           (stamp-horizontal-corridor x1 x2 y2)))))
 
 (defn- room-center
-  "Heler function to find the exact center of a room so we know where to draw
+  "Helper function to find the exact center of a room so we know where to draw
    the corridors from."
   [room]
   (let [[rx ry rw rh] (:bounds room)]
@@ -250,8 +250,4 @@
         lvl-seed (rng/mix world-seed :layout level-id)
         rng-state (rng/make lvl-seed)
         ctx {:rng-state rng-state :level (level/solid-level width height) :rooms []}]
-    (run-passes ctx
-                [place-rooms
-                 carve-corridors
-                 ensure-connected
-                 finalize])))
+    (finalize (run-passes ctx [place-rooms carve-corridors ensure-connected]))))
