@@ -219,3 +219,7 @@
   (for [[y row] (map-indexed vector (:tiles level))
         [x tile] (map-indexed vector row)]
     (assoc tile :pos [x y])))
+
+(defn all-floor-tiles
+  [level]
+  (filter #(= (:tile/type %) :floor) (level->tile-list level)))

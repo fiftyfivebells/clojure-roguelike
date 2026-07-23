@@ -51,7 +51,8 @@
    (- (math/floor-div (- end-den (* 2 depth end-num)) (* 2 end-den)))])
 
 (defn transform
-  "Maps a quadrant (depth, col) to a world [x y] coordinate when given an origin (x, y)."
+  "Maps a quadrant (depth, col) to a world [x y] coordinate when given an origin
+ (x, y)."
   [cardinal [ox oy] depth col]
   (case cardinal
     :north [(+ ox col) (- oy depth)]
