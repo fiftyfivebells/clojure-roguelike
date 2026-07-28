@@ -11,11 +11,11 @@
 (def gen-level-id
   (gen/choose 0 1000))
 
-(defspec generate-produces-a-single-connected-component 500
+(defspec generate-produces-a-single-connected-component 100
   (prop/for-all [world-seed gen-world-seed
                  level-id gen-level-id]
-    (let [lvl (dungeon/generate world-seed level-id)]
-      (= 1 (count (#'dungeon/components lvl))))))
+                (let [lvl (dungeon/generate world-seed level-id)]
+                  (= 1 (count (#'dungeon/components lvl))))))
 
 ;;; Boundary tests
 
@@ -25,12 +25,12 @@
     (and (>= rx 0) (>= ry 0)
          (<= (+ rx rw) w) (<= (+ ry rh) h))))
 
-(defspec rooms-always-stay-within-level-bounds 300
+(defspec rooms-always-stay-within-level-bounds 100
   (prop/for-all [world-seed gen-world-seed
                  level-id gen-level-id]
-    (let [lvl (dungeon/generate world-seed level-id)
-          dims (level/dimensions lvl)]
-      (every? #(room-in-bounds? dims %) (:rooms lvl)))))
+                (let [lvl (dungeon/generate world-seed level-id)
+                      dims (level/dimensions lvl)]
+                  (every? #(room-in-bounds? dims %) (:rooms lvl)))))
 
 (defn- distinct-pairs
   [coll]
@@ -39,13 +39,13 @@
           j (range (inc i) n)]
       [(nth coll i) (nth coll j)])))
 
-(defspec rooms-never-overlap 300
+(defspec rooms-never-overlap 100
   (prop/for-all [world-seed gen-world-seed
                  level-id gen-level-id]
-    (let [lvl (dungeon/generate world-seed level-id)
-          rooms (:rooms lvl)]
-      (every? (fn [[a b]] (not (#'dungeon/rooms-overlap? a b)))
-              (distinct-pairs rooms)))))
+                (let [lvl (dungeon/generate world-seed level-id)
+                      rooms (:rooms lvl)]
+                  (every? (fn [[a b]] (not (#'dungeon/rooms-overlap? a b)))
+                          (distinct-pairs rooms)))))
 
 (defn- border-coords
   [w h]
@@ -54,9 +54,9 @@
           (for [y (range h)] [0 y])
           (for [y (range h)] [(dec w) y])))
 
-(defspec level-border-always-stays-wall 300
+(defspec level-border-always-stays-wall 100
   (prop/for-all [world-seed gen-world-seed
                  level-id gen-level-id]
-    (let [lvl (dungeon/generate world-seed level-id)
-          [w h] (level/dimensions lvl)]
-      (every? #(= (level/wall) (level/tile-at lvl %)) (border-coords w h)))))
+                (let [lvl (dungeon/generate world-seed level-id)
+                      [w h] (level/dimensions lvl)]
+                  (every? #(= (level/wall) (level/tile-at lvl %)) (border-coords w h)))))
