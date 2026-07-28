@@ -1,6 +1,8 @@
 (ns roguelike.dungeon
-  (:require [roguelike.level :as level]
-            [roguelike.rng :as rng]))
+  (:require [clojure.math :as math]
+            [roguelike.level :as level]
+            [roguelike.rng :as rng]
+            [roguelike.pathfinding :as pathfinding]))
 
 ;; Dungeon construction
 
@@ -233,6 +235,48 @@
                 ctx
                 others)))))
 
+(defn- spatial-distance-sq
+  [r1 r2]
+  (distance-sq (room-center r1) (room-center r2)))
+
+(defn- add-loop
+  [ctx r1 r2]
+  (carve-l-corridor ctx (room-center r1) (room-center r2)))
+
+(defn- add-loops
+  [ctx]
+  (let [max-spatial-distance 225
+        ratio-threshold 4
+        rooms (:rooms ctx)]
+    (loop [r1 (first rooms)
+           remaining (rest rooms)
+           ctx ctx]
+      (if (nil? r1)
+        ctx
+        (let [candidates (filter #(<= (spatial-distance-sq r1 %) max-spatial-distance)
+                                 remaining)]
+          (if (empty? candidates)
+            (recur (first remaining) (rest remaining) ctx)
+            (let [walkable? (partial level/walkable-at? (:level ctx))
+                  furthest (math/sqrt (apply max (map #(spatial-distance-sq r1 %) candidates)))
+                  ;; Any path longer than this is already bigger than the ratio for
+                  ;; every candidate, so the search can stop here instead of flooding
+                  ;; the whole level to find out how much longer it is.
+                  cap (inc (long (math/floor (* furthest ratio-threshold))))
+                  distances (pathfinding/distance-map walkable? (room-center r1) cap)
+                  should-loop? (fn [r2]
+                                 (let [spatial (math/sqrt (spatial-distance-sq r1 r2))
+                                       path (distances (room-center r2))]
+                                  ;; A center missing from the map sits past cap.
+                                   (or (nil? path)
+                                       (> path (* spatial ratio-threshold)))))
+                  ctx (reduce (fn [ctx r2]
+                                (if (should-loop? r2)
+                                  (add-loop ctx r1 r2)
+                                  ctx))
+                              ctx candidates)]
+              (recur (first remaining) (rest remaining) ctx))))))))
+
 (defn- run-passes
   [ctx passes]
   (reduce (fn [ctx pass] (pass ctx)) ctx passes))
@@ -250,4 +294,5 @@
         lvl-seed (rng/mix world-seed :layout level-id)
         rng-state (rng/make lvl-seed)
         ctx {:rng-state rng-state :level (level/solid-level width height) :rooms []}]
-    (finalize (run-passes ctx [place-rooms carve-corridors ensure-connected]))))
+    (finalize
+     (run-passes ctx [place-rooms carve-corridors ensure-connected add-loops]))))
