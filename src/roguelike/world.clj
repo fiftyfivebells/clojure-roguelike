@@ -115,8 +115,9 @@
 (defn visible-cells
   "Takes a world and sight-radius and returns a set of tiles visible from the "
   [world actor-id radius]
-  (let [opaque? (partial level/opaque-at? (current-level world))]
-    (fov/visible-cells opaque? (player-pos world) radius)))
+  (let [opaque? (partial level/opaque-at? (current-level world))
+        actor-pos (:pos (get-actor world actor-id))]
+    (fov/visible-cells opaque? actor-pos radius)))
 
 (defn observe
   [world]
@@ -126,10 +127,9 @@
 
 (defn can-see?
   [world from-id to-pos]
-  (let [from (get-actor world from-id)
-        radius (sight-radius world from-id)
+  (let [radius (sight-radius world from-id)
         opaque? (partial level/opaque-at? (current-level world))
-        visible (fov/visible-cells opaque? (:pos from) radius)]
+        visible (visible-cells world from-id radius)]
     (contains? visible to-pos)))
 
 (defn visible-actors
