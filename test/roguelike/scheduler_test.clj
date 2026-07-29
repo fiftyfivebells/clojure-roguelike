@@ -22,12 +22,13 @@
   [& {:keys [player monsters current-time next-tick]
       :or   {player (make-player {}) monsters [] current-time 0 next-tick 10}}]
   (let [current-level (reduce level/add-entity (level/test-level) monsters)]
-    {:player         player
-     :current-level  current-level
-     :next-tick      next-tick
-     :current-time   current-time
-     :rng-state      (rng/make 42)
-     :next-entity-id (inc (apply max 0 (map :entity/id monsters)))}))
+    {:player           player
+     :current-level-id 0
+     :levels           {0 current-level}
+     :next-tick        next-tick
+     :current-time     current-time
+     :rng-state        (rng/make 42)
+     :next-entity-id   (inc (apply max 0 (map :entity/id monsters)))}))
 
 ;;; cost-of
 

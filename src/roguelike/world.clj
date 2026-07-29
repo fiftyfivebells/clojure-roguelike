@@ -2,7 +2,24 @@
   (:require [roguelike.knowledge :as knowledge]
             [roguelike.level :as level]
             [roguelike.rng :as rng]
-            [roguelike.fov :as fov]))
+            [roguelike.fov :as fov]
+            [roguelike.dungeon :as dungeon]
+            [roguelike.world :as world]))
+
+;; Levels
+
+(defn- current-level-path
+  [world]
+  [:levels (:current-level-id world)])
+
+(defn current-level
+  "Returns the currently active level of the world."
+  [world]
+  (get-in world (current-level-path world)))
+
+(defn update-current-level
+  [world f]
+  (update-in world (current-level-path world) f))
 
 ;; World Construction
 
@@ -93,7 +110,7 @@
   [world entity-id f]
   (if (player? world entity-id)
     (update world :player f)
-    (update world :current-level level/update-entity entity-id f)))
+    (update-current-level world #(level/update-entity % entity-id f))))
 
 (defn entity-at
   "Gets the entity at the given coord pair. If the pair is the player's position, return the player. Otherwise,
@@ -131,9 +148,8 @@
 (defn observe
   [world]
   (let [radius (sight-radius world (player-id world))
-        visible (visible-cells world (player-id world) radius)
-        new-level (level/remember-visible (current-level world) visible)]
-    (assoc world :current-level new-level)))
+        visible (visible-cells world (player-id world) radius)]
+    (update-current-level world #(level/remember-visible % visible))))
 
 (defn can-see?
   [world from-id to-pos]

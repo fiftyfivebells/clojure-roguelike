@@ -29,12 +29,13 @@
   (let [current-level (-> (level/test-level)
                           (wall-off walls)
                           (as-> lvl (reduce level/add-entity lvl monsters)))]
-    {:player         player
-     :current-level  current-level
-     :next-tick      10
-     :current-time   0
-     :rng-state      (rng/make 42)
-     :next-entity-id (inc (apply max 0 (map :entity/id monsters)))}))
+    {:player           player
+     :current-level-id 0
+     :levels           {0 current-level}
+     :next-tick        10
+     :current-time     0
+     :rng-state        (rng/make 42)
+     :next-entity-id   (inc (apply max 0 (map :entity/id monsters)))}))
 
 (defn- chebyshev
   "Step-distance between two cells on this 8-connected grid."
