@@ -12,5 +12,5 @@
         observed (world/observe walked)
         serialized (pr-str observed)
         deserialized (edn/read-string serialized)]
-    (is (seq (:known (:current-level observed))))
+    (is (seq (:known (world/current-level observed))))
     (is (= observed deserialized))))

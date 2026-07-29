@@ -47,6 +47,13 @@
                 :rng-state (rng/make seed)}]
      (spawn-entity world))))
 
+;; Levels
+
+(defn current-level
+  "Returns the currently active level of the world."
+  [world]
+  (:current-level world))
+
 ;; Actors
 
 (defn entity-type
@@ -74,13 +81,13 @@
   "Gets a list of all active entities in the current level. Essentially just conjs the player onto the list
   of entities for the level."
   [world]
-  (conj (level/entities-of (:current-level world)) (:player world)))
+  (conj (level/entities-of (current-level world)) (:player world)))
 
 (defn get-actor
   [world entity-id]
   (if (player? world entity-id)
     (:player world)
-    (level/get-entity (:current-level world) entity-id)))
+    (level/get-entity (current-level world) entity-id)))
 
 (defn update-actor
   [world entity-id f]
@@ -96,7 +103,7 @@
         player-pos (:pos player)]
     (if (= player-pos [x y])
       player
-      (level/entity-at (:current-level world) [x y]))))
+      (level/entity-at (current-level world) [x y]))))
 
 ;; Tiles
 
@@ -104,7 +111,7 @@
   "Takes in a world and coords, then dispatches to the tile-at function in the level namespace using the
   currently active level. Returns a map containing the tile at the coords and the x and y positions."
   [world [x y]]
-  (let [tile (level/tile-at (:current-level world) [x y])]
+  (let [tile (level/tile-at (current-level world) [x y])]
     (assoc tile :pos [x y])))
 
 ;; FOV
@@ -118,21 +125,21 @@
 (defn visible-cells
   "Takes a world and sight-radius and returns a set of tiles visible from the "
   [world actor-id radius]
-  (let [opaque? (partial level/opaque-at? (:current-level world))]
+  (let [opaque? (partial level/opaque-at? (current-level world))]
     (fov/visible-cells opaque? (player-pos world) radius)))
 
 (defn observe
   [world]
   (let [radius (sight-radius world (player-id world))
         visible (visible-cells world (player-id world) radius)
-        new-level (level/remember-visible (:current-level world) visible)]
+        new-level (level/remember-visible (current-level world) visible)]
     (assoc world :current-level new-level)))
 
 (defn can-see?
   [world from-id to-pos]
   (let [from (get-actor world from-id)
         radius (sight-radius world from-id)
-        opaque? (partial level/opaque-at? (:current-level world))
+        opaque? (partial level/opaque-at? (current-level world))
         visible (fov/visible-cells opaque? (:pos from) radius)]
     (contains? visible to-pos)))
 
@@ -146,7 +153,7 @@
 (defn level-view
   [world]
   (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))
-        curr-lvl (:current-level world)
+        curr-lvl (current-level world)
         known   (level/known-tiles curr-lvl)
         classifier (fn [tile]
                      (let [pos (:pos tile)]
@@ -171,7 +178,7 @@
 
 (defn walkable-at?
   [world [x y]]
-  (level/walkable-at? (:current-level world) [x y]))
+  (level/walkable-at? (current-level world) [x y]))
 
 (defn get-proposed-coords
   "Takes in a world, actor-id, and an [x y] delta. Then it finds the actor using the id and creates

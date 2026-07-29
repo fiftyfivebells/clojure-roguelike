@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [roguelike.scheduler :as scheduler]
             [roguelike.level :as level]
+            [roguelike.world :as world]
             [roguelike.ai :as ai]
             [roguelike.rng :as rng]))
 
@@ -50,13 +51,13 @@
   (let [m      (make-monster 1 {})
         w      (make-world :monsters [m] :current-time 30)
         result (#'scheduler/reschedule w 1 10)]
-    (is (= 40 (:next-time (level/get-entity (:current-level result) 1))))))
+    (is (= 40 (:next-time (level/get-entity (world/current-level result) 1))))))
 
 (deftest reschedule-does-not-affect-other-actors
   (let [m      (make-monster 1 {:next-time 5})
         w      (make-world :monsters [m] :current-time 0)
         result (#'scheduler/reschedule w 0 10)]
-    (is (= 5 (:next-time (level/get-entity (:current-level result) 1))) "monster untouched")))
+    (is (= 5 (:next-time (level/get-entity (world/current-level result) 1))) "monster untouched")))
 
 ;;; resolve-action
 
@@ -169,7 +170,7 @@
         (let [[new-world events status] result]
           (is (= :acted status))
           (is (= [] events))
-          (is (= 15 (:next-time (level/get-entity (:current-level new-world) 1)))
+          (is (= 15 (:next-time (level/get-entity (world/current-level new-world) 1)))
               "monster rescheduled at current-time (5) + wait cost (10)"))))))
 
 (deftest advance-monster-turn-moves-monster-when-ai-decides-move
@@ -179,7 +180,7 @@
     (with-redefs [ai/decide (fn [world _] [world {:action/type :world/move :delta [1 0]}])]
       (let [[new-world events] (scheduler/advance w)]
         (is (= [{:event/type :world/moved :player? false}] events))
-        (is (= [2 1] (:pos (level/get-entity (:current-level new-world) 1))))))))
+        (is (= [2 1] (:pos (level/get-entity (world/current-level new-world) 1))))))))
 
 (deftest advance-monster-turn-carries-updated-rng-state-into-world
   (let [player        (make-player {:next-time 1000})
