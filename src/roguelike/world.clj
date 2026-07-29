@@ -169,6 +169,10 @@
 
 ;; Movement
 
+(defn walkable-at?
+  [world [x y]]
+  (level/walkable-at? (:current-level world) [x y]))
+
 (defn get-proposed-coords
   "Takes in a world, actor-id, and an [x y] delta. Then it finds the actor using the id and creates
   proposed coords based on the provided delta. Gives back the new coords."

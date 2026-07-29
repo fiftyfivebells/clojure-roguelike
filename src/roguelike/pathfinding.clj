@@ -1,6 +1,4 @@
-(ns roguelike.pathfinding
-  (:require
-   [roguelike.level :as level]))
+(ns roguelike.pathfinding)
 
 (defn- neighbors
   [[x y]]
@@ -8,6 +6,10 @@
         dy [-1 0 1]
         :when (not (and (zero? dx) (zero? dy)))]
     [(+ x dx) (+ y dy)]))
+
+(defn neighbors-in-map
+  [dm [x y]]
+  (select-keys dm (neighbors [x y])))
 
 (defn distance-map
   "BFS in the level outward from the provided source. Records how many steps it
