@@ -230,7 +230,7 @@
                 :player {:entity/id 0
                          :entity/type :player
                          :pos player-start-pos
-                         :sight/radius 40  ;; TODO: just a random magic number, fix to be more robust later
+                         :sight/radius 4  ;; TODO: just a random magic number, fix to be more robust later
                          :next-time 0}
                 :current-level-id 0
                 :levels {0 first-dungeon}
