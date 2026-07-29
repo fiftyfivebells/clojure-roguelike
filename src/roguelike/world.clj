@@ -39,37 +39,10 @@
   (let [[next-id next-world] (allocate-entity-id world)
         monster {:entity/id next-id
                  :entity/type :generic-monster
-                 :pos [15 15]
-                 :sight/radius 4  ;; TODO: just a random magic number, fix to be more robust later
+                 :pos (level/room-center (second (level/get-rooms (current-level world))))
+                 :sight/radius 2  ;; TODO: just a random magic number, fix to be more robust later
                  :next-time (:current-time next-world)}]
-    (update next-world :current-level level/add-entity monster)))
-
-;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
-;; this is so I don't have to move the player in and out of the lists for the different levels.
-;; the entire idea behind the "active-actors" function below is to facilitate this.
-(defn new-world
-  ([]
-   (new-world 123456789))  ;; just some default seed
-  ([seed]
-   (let [world {:player {:entity/id 0
-                         :entity/type :player
-                         :pos [10 12]
-                         :sight/radius 4  ;; TODO: just a random magic number, fix to be more robust later
-                         :next-time 0}
-                :current-level (level/test-level)
-                :levels        []
-                :next-entity-id 1
-                :next-tick 10
-                :current-time 0
-                :rng-state (rng/make seed)}]
-     (spawn-entity world))))
-
-;; Levels
-
-(defn current-level
-  "Returns the currently active level of the world."
-  [world]
-  (:current-level world))
+    (update-current-level next-world #(level/add-entity % monster))))
 
 ;; Actors
 
@@ -243,3 +216,28 @@
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))
+
+;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
+;; this is so I don't have to move the player in and out of the lists for the different levels.
+;; the entire idea behind the "active-actors" function below is to facilitate this.
+(defn new-world
+  ([]
+   (new-world 123456789))  ;; just some default seed
+  ([seed]
+   (let [first-dungeon (dungeon/generate seed 0)
+         player-start-pos (level/room-center (first (level/get-rooms first-dungeon)))
+         world {:world-seed seed
+                :player {:entity/id 0
+                         :entity/type :player
+                         :pos player-start-pos
+                         :sight/radius 40  ;; TODO: just a random magic number, fix to be more robust later
+                         :next-time 0}
+                :current-level-id 0
+                :levels {0 first-dungeon}
+                :next-entity-id 1
+                :next-tick 10
+                :current-time 0
+                :rng-state (rng/make seed)}]
+     (-> world
+         (spawn-entity)
+         (observe)))))

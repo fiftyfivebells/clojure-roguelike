@@ -118,13 +118,6 @@
           (stamp-vertical-corridor y1 y2 x1)
           (stamp-horizontal-corridor x1 x2 y2)))))
 
-(defn- room-center
-  "Helper function to find the exact center of a room so we know where to draw
-   the corridors from."
-  [room]
-  (let [[rx ry rw rh] (:bounds room)]
-    [(+ rx (quot rw 2)) (+ ry (quot rh 2))]))
-
 (defn- distance-sq
   "Computes the distance between two points in the grid."
   [[x1 y1] [x2 y2]]
@@ -146,9 +139,9 @@
         (if (empty? remaining)
           ctx
           (let [nearest (apply min-key
-                               #(distance-sq (room-center current) (room-center %))
+                               #(distance-sq (level/room-center current) (level/room-center %))
                                remaining)
-                ctx (carve-l-corridor ctx (room-center current) (room-center nearest))]
+                ctx (carve-l-corridor ctx (level/room-center current) (level/room-center nearest))]
             (recur nearest (remove #(= % nearest) remaining) ctx)))))))
 
 (defn- neighbors
@@ -237,11 +230,11 @@
 
 (defn- spatial-distance-sq
   [r1 r2]
-  (distance-sq (room-center r1) (room-center r2)))
+  (distance-sq (level/room-center r1) (level/room-center r2)))
 
 (defn- add-loop
   [ctx r1 r2]
-  (carve-l-corridor ctx (room-center r1) (room-center r2)))
+  (carve-l-corridor ctx (level/room-center r1) (level/room-center r2)))
 
 (defn- add-loops
   [ctx]
@@ -263,10 +256,10 @@
                   ;; every candidate, so the search can stop here instead of flooding
                   ;; the whole level to find out how much longer it is.
                   cap (inc (long (math/floor (* furthest ratio-threshold))))
-                  distances (pathfinding/distance-map walkable? (room-center r1) cap)
+                  distances (pathfinding/distance-map walkable? (level/room-center r1) cap)
                   should-loop? (fn [r2]
                                  (let [spatial (math/sqrt (spatial-distance-sq r1 r2))
-                                       path (distances (room-center r2))]
+                                       path (distances (level/room-center r2))]
                                   ;; A center missing from the map sits past cap.
                                    (or (nil? path)
                                        (> path (* spatial ratio-threshold)))))
@@ -289,9 +282,9 @@
 
 (defn generate
   [world-seed level-id]
-  (let [width 80  ;; TODO: this and height hard-coded for now, come back to this
+  (let [width  80  ;; TODO: this and height hard-coded for now, come back to this
         height 22
-        lvl-seed (rng/mix world-seed :layout level-id)
+        lvl-seed  (rng/mix world-seed :layout level-id)
         rng-state (rng/make lvl-seed)
         ctx {:rng-state rng-state :level (level/solid-level width height) :rooms []}]
     (finalize

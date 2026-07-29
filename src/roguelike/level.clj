@@ -183,9 +183,20 @@
   ([{:keys [open? locked?] :or {open? false locked? false}}]
    (merge (:door tile-types) {:open? open? :locked? locked?})))
 
+(defn get-rooms
+  [level]
+  (:rooms level))
+
 (defn set-rooms
   [level rooms]
   (assoc-in level [:rooms] rooms))
+
+(defn room-center
+  "Helper function to find the exact center of a room so we know where to draw
+   the corridors from."
+  [room]
+  (let [[rx ry rw rh] (:bounds room)]
+    [(+ rx (quot rw 2)) (+ ry (quot rh 2))]))
 
 (defn solid-level
   ([]
