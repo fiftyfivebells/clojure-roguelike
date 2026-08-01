@@ -134,3 +134,26 @@
           [w' action] (#'ai/chase w monster)]
       (is (not (chased? w w')))
       (is (contains? unit-directions (:delta action))))))
+
+;;; decide
+
+(deftest decide-chases-only-while-the-player-is-in-sight
+  (testing "in the open, the monster sees the player and chases"
+    (let [monster (make-monster 1 {:pos [14 10] :sight/radius 6})
+          w (make-world :monsters [monster])
+          [w' action] (ai/decide w 1)
+          new-pos (mapv + (:pos monster) (:delta action))]
+      (is (world/can-see? w 1 (world/player-pos w)))
+      (is (chased? w w'))
+      (is (= (dec (chebyshev (:pos monster) (world/player-pos w)))
+             (chebyshev new-pos (world/player-pos w))))))
+
+  (testing "a wall between them breaks line of sight, so the same monster wanders"
+    ;; identical to the case above apart from the single blocking tile: the player is still
+    ;; reachable (pathfinding routes around one wall), so only visibility can explain the switch
+    (let [monster (make-monster 1 {:pos [14 10] :sight/radius 6})
+          w (make-world :monsters [monster] :walls [[12 10]])
+          [w' action] (ai/decide w 1)]
+      (is (not (world/can-see? w 1 (world/player-pos w))))
+      (is (not (chased? w w')) "wander consumed rng, so this was not a chase")
+      (is (contains? unit-directions (:delta action))))))
