@@ -151,12 +151,10 @@
         :when (not (and (zero? dx) (zero? dy)))]
     [(+ x dx) (+ y dy)]))
 
-(defn- floor-cell?
+(defn- walkable-cell?
   [level [x y]]
   (let [[width height] (level/dimensions level)]
-    (and (<= 0 x) (< x width)
-         (<= 0 y) (< y height)
-         (= (level/tile-at level [x y]) (level/floor)))))
+    (level/walkable-at? level [x y])))
 
 ;; Flood fill
 ;; https://en.wikipedia.org/wiki/Flood_fill
@@ -173,7 +171,7 @@
         (if (contains? visited cell)
           (recur visited (rest frontier))
           (let [visited (conj visited cell)
-                new-cells (filter #(and (floor-cell? level %)
+                new-cells (filter #(and (walkable-cell? level %)
                                         (not (contains? visited %)))
                                   (neighbors cell))]
             (recur visited (into (rest frontier) new-cells))))))))
