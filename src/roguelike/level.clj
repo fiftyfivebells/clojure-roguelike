@@ -189,23 +189,24 @@
 
 (defn stairs
   [stair]
+  (println "in level" stair)
   (case stair
-    :stairs/up   (:stairs-up tile-types)
-    :stairs/down (:stairs-down tile-types)
+    :stairs-up   (:stairs-up tile-types)
+    :stairs-down (:stairs-down tile-types)
     (throw (ex-info "unknown stair type" {:stair stair}))))
 
 (defn- on-stairs?
-  [level [x y] dir]
+  [level [x y] stair-dir]
   (let [tile (tile-at level [x y])]
-    (= (stairs dir) tile)))
+    (= stair-dir (classify-tile tile))))
 
 (defn on-stairs-down?
   [level [x y]]
-  (on-stairs? level [x y] :stairs/down))
+  (on-stairs? level [x y] :stairs-down))
 
 (defn on-stairs-up?
   [level [x y]]
-  (on-stairs? level [x y] :stairs/up))
+  (on-stairs? level [x y] :stairs-up))
 
 (defn up-stair-pos
   [level]

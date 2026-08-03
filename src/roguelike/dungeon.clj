@@ -285,12 +285,12 @@
         [ctx [r1 r2]] (rng/draw-nth ctx 2 rooms)
         [ctx down] (random-tile-in-room ctx r2)
         ctx (update ctx :level #(-> %
-                                    (place-stair :stairs/down down)
+                                    (place-stair :stairs-down down)
                                     (assoc :stairs/down down)))]
     (if include-up?
       (let [[ctx up] (random-tile-in-room ctx r1)]
         (update ctx :level #(-> %
-                                (place-stair :stairs/up up)
+                                (place-stair :stairs-up up)
                                 (assoc :stairs/up up))))
       ctx)))
 
