@@ -241,7 +241,7 @@
 (defn- load-or-generate
   [world id]
   (let [;; levels already visited stay in :levels, so only generate on first arrival
-        new-lvl (or (level-at world next-level-id)
+        new-lvl (or (level-at world id)
                     (dungeon/generate (:world-seed world) id))]
     (change-current-level world id new-lvl)))
 
@@ -249,13 +249,13 @@
   [world]
   (let [next-level-id (inc (current-level-id world))
         new-world (load-or-generate world next-level-id)]
-    (move-actor new-world (player-id world) (:up (current-level new-world)))))
+    [(move-actor new-world (player-id world) (level/up-stair-pos (current-level new-world))) []]))
 
 (defn ascend
   [world]
   (let [next-level-id (dec (current-level-id world))
         new-world (load-or-generate world next-level-id)]
-    (move-actor new-world (player-id world) (:up (current-level new-world)))))
+    [(move-actor new-world (player-id world) (level/down-stair-pos (current-level new-world))) []]))
 
 (defn- on-stairs-down?
   [world]

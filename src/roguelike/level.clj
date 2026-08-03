@@ -190,8 +190,8 @@
 (defn stairs
   [stair]
   (case stair
-    :up   (:stairs-up tile-types)
-    :down (:stairs-down tile-types)
+    :stairs/up   (:stairs-up tile-types)
+    :stairs/down (:stairs-down tile-types)
     (throw (ex-info "unknown stair type" {:stair stair}))))
 
 (defn- on-stairs?
@@ -201,11 +201,19 @@
 
 (defn on-stairs-down?
   [level [x y]]
-  (on-stairs? level [x y] :down))
+  (on-stairs? level [x y] :stairs/down))
 
 (defn on-stairs-up?
   [level [x y]]
-  (on-stairs? level [x y] :up))
+  (on-stairs? level [x y] :stairs/up))
+
+(defn up-stair-pos
+  [level]
+  (:stairs/up level))
+
+(defn down-stair-pos
+  [level]
+  (:stairs/down level))
 
 (defn get-rooms
   [level]

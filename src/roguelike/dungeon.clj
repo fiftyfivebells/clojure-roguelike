@@ -285,13 +285,13 @@
         [ctx [r1 r2]] (rng/draw-nth ctx 2 rooms)
         [ctx down] (random-tile-in-room ctx r2)
         ctx (update ctx :level #(-> %
-                                    (place-stair :down down)
-                                    (assoc :down down)))]
+                                    (place-stair :stairs/down down)
+                                    (assoc :stairs/down down)))]
     (if include-up?
       (let [[ctx up] (random-tile-in-room ctx r1)]
         (update ctx :level #(-> %
-                                (place-stair :up up)
-                                (assoc :up up))))
+                                (place-stair :stairs/up up)
+                                (assoc :stairs/up up))))
       ctx)))
 
 (defn- run-passes
@@ -310,7 +310,7 @@
         height 22
         lvl-seed  (rng/mix world-seed :layout level-id)
         rng-state (rng/make lvl-seed)
-        include-up? (= 0 level-id)
+        include-up? (not= 0 level-id)
         stair-placement (fn [ctx] (place-stairs ctx include-up?))
         ctx {:rng-state rng-state :level (level/solid-level width height) :rooms []}]
     (finalize
