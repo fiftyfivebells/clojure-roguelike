@@ -64,8 +64,8 @@
   (let [[new-y new-x] (resolve-coords level [x y])]
     (update-in level [:tiles new-y new-x] f)))
 
-(def ^:private passable-classifications #{:floor :open-door})
-(def ^:private transparent-classification #{:floor :open-door})
+(def ^:private passable-classifications #{:floor :open-door :stairs-down :stairs-up})
+(def ^:private transparent-classification #{:floor :open-door :stairs-down :stairs-up})
 
 (defn classify-tile
   "Returns the semantic classification of a tile: :floor, :wall, :closed-door,
@@ -77,6 +77,8 @@
     :wall        :wall
     :floor       :floor
     :door (if (:open? tile) :open-door :closed-door)
+    :stairs-down :stairs-down
+    :stairs-up   :stairs-up
     :unknown))
 
 (defn passable?
@@ -168,7 +170,9 @@
 (def ^:private tile-types
   {:wall  {:tile/type :wall}
    :floor {:tile/type :floor}
-   :door  {:tile/type :door :open? false :locked? false}})
+   :door  {:tile/type :door :open? false :locked? false}
+   :stairs-down {:tile/type :stairs-down}
+   :stairs-up   {:tile/type :stairs-up}})
 
 (defn floor
   []
@@ -182,6 +186,26 @@
   ([] (:door tile-types))
   ([{:keys [open? locked?] :or {open? false locked? false}}]
    (merge (:door tile-types) {:open? open? :locked? locked?})))
+
+(defn stairs
+  [stair]
+  (case stair
+    :up   (:stairs-up tile-types)
+    :down (:stairs-down tile-types)
+    (throw (ex-info "unknown stair type" {:stair stair}))))
+
+(defn- on-stairs?
+  [level [x y] dir]
+  (let [tile (tile-at level [x y])]
+    (= (stairs dir) tile)))
+
+(defn on-stairs-down?
+  [level [x y]]
+  (on-stairs? level [x y] :down))
+
+(defn on-stairs-up?
+  [level [x y]]
+  (on-stairs? level [x y] :up))
 
 (defn get-rooms
   [level]

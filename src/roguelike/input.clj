@@ -29,6 +29,8 @@
     (= (:key key-event) \j) {:action/type :world/move :delta [0 1]}
     (= (:key key-event) \k) {:action/type :world/move :delta [0 -1]}
     (= (:key key-event) \.) {:action/type :world/wait}
+    (= (:key key-event) \>) {:action/type :world/descend}
+    (= (:key key-event) \<) {:action/type :world/ascend}
 
     :else {:action/type :ui/none}))
 

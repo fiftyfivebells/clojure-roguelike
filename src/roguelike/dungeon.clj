@@ -13,8 +13,8 @@
 ;; ctx stands for context. A context is a container for generation:
 ;; {
 ;;  :rng-state -> internal rng-state that rng uses to geneerate random values
-;;  :level -> the level the generator is making the dungeon for
-;;  :rooms -> a list of rooms placed on the level
+;;  :level     -> the level the generator is making the dungeon for
+;;  :rooms     -> a list of rooms placed on the level
 ;; }
 
 ;; TODO: define min and max room width and height
@@ -270,6 +270,32 @@
                               ctx candidates)]
               (recur (first remaining) (rest remaining) ctx))))))))
 
+(defn- random-tile-in-room
+  [ctx room]
+  (let [[rx ry rw rh] (:bounds room)
+        [ctx x] (rng/draw-int ctx rx (+ rx rw))
+        [ctx y] (rng/draw-int ctx ry (+ ry rh))]
+    [ctx [x y]]))
+
+(defn- place-stair
+  [level stair [x y]]
+  (level/set-tile level [x y] (level/stairs stair)))
+
+(defn- place-stairs
+  [ctx include-up?]
+  (let [rooms (:rooms ctx)
+        [ctx [r1 r2]] (rng/draw-nth ctx 2 rooms)
+        [ctx down] (random-tile-in-room ctx r2)
+        ctx (update ctx :level #(-> %
+                                    (place-stair :down down)
+                                    (assoc :down down)))]
+    (if include-up?
+      (let [[ctx up] (random-tile-in-room ctx r1)]
+        (update ctx :level #(-> %
+                                (place-stair :up up)
+                                (assoc :up up))))
+      ctx)))
+
 (defn- run-passes
   [ctx passes]
   (reduce (fn [ctx pass] (pass ctx)) ctx passes))
@@ -281,11 +307,12 @@
 ;; Public API
 
 (defn generate
-  [world-seed level-id]
+  [world-seed level-id include-up?]
   (let [width  80  ;; TODO: this and height hard-coded for now, come back to this
         height 22
         lvl-seed  (rng/mix world-seed :layout level-id)
         rng-state (rng/make lvl-seed)
+        stair-placement (fn [ctx] (place-stairs ctx include-up?))
         ctx {:rng-state rng-state :level (level/solid-level width height) :rooms []}]
     (finalize
-     (run-passes ctx [place-rooms carve-corridors ensure-connected add-loops]))))
+     (run-passes ctx [place-rooms carve-corridors ensure-connected add-loops stair-placement]))))

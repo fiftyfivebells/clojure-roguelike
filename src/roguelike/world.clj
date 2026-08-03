@@ -3,8 +3,7 @@
             [roguelike.level :as level]
             [roguelike.rng :as rng]
             [roguelike.fov :as fov]
-            [roguelike.dungeon :as dungeon]
-            [roguelike.world :as world]))
+            [roguelike.dungeon :as dungeon]))
 
 ;; Levels
 
@@ -190,14 +189,15 @@
   "Classifies what's at the given coords for movement purposes: :passable, :wall,
   :door, or :actor. The default case returns :unknown."
   [world [x y]]
-  (if (entity-at world [x y])
-    :actor
-    (case (level/classify-tile (tile-at world [x y]))
-      :floor       :passable
-      :open-door   :passable
-      :wall        :wall
-      :closed-door :door
-      :unknown)))
+  (cond
+    (entity-at world [x y]) :actor
+    (level/walkable-at? (current-level world) [x y]) :passable
+    ;; Only reached when movement is already blocked: this case exists solely to
+    ;; name the obstacle for the player-facing message.
+    :else (case (level/classify-tile (tile-at world [x y]))
+            :wall        :wall
+            :closed-door :door
+            :unknown)))
 
 (defn attempt-movement
   [world actor-id delta]
@@ -208,9 +208,57 @@
       [(move-actor world actor-id new-pos) [{:event/type :world/moved :player? player?}]]
       [world [{:event/type :world/blocked :by destination :player? player?}]])))
 
+(defn- next-level-id
+  [world]
+  (inc (:current-level-id world)))
+
+(defn- previous-level-id
+  [world]
+  (dec (:current-level-id world)))
+
+(defn- change-current-level
+  [world id lvl]
+  (-> world
+      (assoc :current-level-id id)
+      (assoc-in [:levels id] lvl)))
+
+(defn descend
+  [world]
+  (let [next-lvl-id (next-level-id world)
+        ;; levels already visited stay in :levels, so only generate on first arrival
+        next-lvl (or (get-in world [:levels next-lvl-id])
+                     (dungeon/generate (:world-seed world) next-lvl-id true))]
+    [(-> world
+         (change-current-level next-lvl-id next-lvl)
+         (move-actor (player-id world) (:up next-lvl)))
+     []]))
+
+(defn ascend
+  [world]
+  (let [prev-lvl-id (previous-level-id world)
+        prev-lvl (get-in world [:levels prev-lvl-id])]
+    [(-> world
+         (change-current-level prev-lvl-id prev-lvl)
+         (move-actor (player-id world) (:down prev-lvl)))
+     []]))
+
+(defn- on-stairs-down?
+  [world]
+  (level/on-stairs-down? (current-level world) (player-pos world)))
+
+(defn- on-stairs-up?
+  [world]
+  (level/on-stairs-up? (current-level world) (player-pos world)))
+
 (defn update-world
   [world actor-id action]
   (case (:action/type action)
+    :world/descend (if (on-stairs-down? world)
+                     (descend world)
+                     [world []])
+    :world/ascend (if (on-stairs-up? world)
+                    (ascend world)
+                    [world []])
     :world/move (attempt-movement world actor-id (:delta action))
     :world/wait [world []]
 
@@ -224,7 +272,7 @@
   ([]
    (new-world 123456789))  ;; just some default seed
   ([seed]
-   (let [first-dungeon (dungeon/generate seed 0)
+   (let [first-dungeon (dungeon/generate seed 0 false)
          player-start-pos (level/room-center (first (level/get-rooms first-dungeon)))
          world {:world-seed seed
                 :player {:entity/id 0

@@ -135,6 +135,17 @@
   "Takes an rng-holder (any map with an :rng-state key, ie. a world of level) and
    a collection, then returns [holder elem], where elem is a random element from
    inside the collection and holder has its :rng-state advanced."
-  [holder coll]
-  (let [[next-holder val] (draw-int holder 0 (count coll))]
-    [next-holder (nth coll val)]))
+  ([holder n coll]
+   (loop [n n
+          coll coll
+          holder holder
+          acc []]
+     (if (or (zero? n) (empty? coll))
+       [holder acc]
+       (let [[next-holder val] (draw-int holder 0 (count coll))
+             item (nth coll val)
+             new-coll (remove #(= item %) coll)]
+         (recur (dec n) new-coll next-holder (conj acc item))))))
+  ([holder coll]
+   (let [[next-holder val] (draw-int holder 0 (count coll))]
+     [next-holder (nth coll val)])))

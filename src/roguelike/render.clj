@@ -18,6 +18,8 @@
   {:wall        "#"
    :floor       "."
    :closed-door "+"
+   :stairs-down ">"
+   :stairs-up   "<"
    :unknown     " "})
 
 (def ^:private entity->glyph
