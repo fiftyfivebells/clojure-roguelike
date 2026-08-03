@@ -305,11 +305,12 @@
 ;; Public API
 
 (defn generate
-  [world-seed level-id include-up?]
+  [world-seed level-id]
   (let [width  80  ;; TODO: this and height hard-coded for now, come back to this
         height 22
         lvl-seed  (rng/mix world-seed :layout level-id)
         rng-state (rng/make lvl-seed)
+        include-up? (= 0 level-id)
         stair-placement (fn [ctx] (place-stairs ctx include-up?))
         ctx {:rng-state rng-state :level (level/solid-level width height) :rooms []}]
     (finalize

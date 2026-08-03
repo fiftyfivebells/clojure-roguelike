@@ -238,25 +238,24 @@
       (assoc :current-level-id id)
       (assoc-in [:levels id] lvl)))
 
+(defn- load-or-generate
+  [world id]
+  (let [;; levels already visited stay in :levels, so only generate on first arrival
+        new-lvl (or (level-at world next-level-id)
+                    (dungeon/generate (:world-seed world) id))]
+    (change-current-level world id new-lvl)))
+
 (defn descend
   [world]
-  (let [next-lvl-id (next-level-id world)
-        ;; levels already visited stay in :levels, so only generate on first arrival
-        next-lvl (or (get-in world [:levels next-lvl-id])
-                     (dungeon/generate (:world-seed world) next-lvl-id true))]
-    [(-> world
-         (change-current-level next-lvl-id next-lvl)
-         (move-actor (player-id world) (:up next-lvl)))
-     []]))
+  (let [next-level-id (inc (current-level-id world))
+        new-world (load-or-generate world next-level-id)]
+    (move-actor new-world (player-id world) (:up (current-level new-world)))))
 
 (defn ascend
   [world]
-  (let [prev-lvl-id (previous-level-id world)
-        prev-lvl (get-in world [:levels prev-lvl-id])]
-    [(-> world
-         (change-current-level prev-lvl-id prev-lvl)
-         (move-actor (player-id world) (:down prev-lvl)))
-     []]))
+  (let [next-level-id (dec (current-level-id world))
+        new-world (load-or-generate world next-level-id)]
+    (move-actor new-world (player-id world) (:up (current-level new-world)))))
 
 (defn- on-stairs-down?
   [world]
@@ -288,7 +287,7 @@
   ([]
    (new-world 123456789))  ;; just some default seed
   ([seed]
-   (let [first-dungeon (dungeon/generate seed 0 false)
+   (let [first-dungeon (dungeon/generate seed 0)
          player-start-pos (level/room-center (first (level/get-rooms first-dungeon)))
          world {:world-seed seed
                 :player {:entity/id 0
