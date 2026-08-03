@@ -7,18 +7,42 @@
 
 ;; Levels
 
-(defn- current-level-path
+(defn- level-at
+  "Takes a world and id and returns the level associated with that id. This is
+   intentionally allowed to return nil, so that callers can use the nil as a
+   signal that a new level should be created using the provided id."
+  [world id]
+  (get-in world [:levels id]))
+
+(defn- put-level
+  [world id lvl]
+  (assoc-in world [:levels id] lvl))
+
+(defn- current-level-id
   [world]
-  [:levels (:current-level-id world)])
+  (:current-level-id world))
+
+(defn- set-current-level-id
+  [world id]
+  (assoc world :current-level-id id))
+
+(defn- next-level-id
+  [world]
+  (inc (:current-level-id world)))
+
+(defn- previous-level-id
+  [world]
+  (dec (:current-level-id world)))
 
 (defn current-level
   "Returns the currently active level of the world."
   [world]
-  (get-in world (current-level-path world)))
+  (level-at world (current-level-id world)))
 
 (defn update-current-level
   [world f]
-  (update-in world (current-level-path world) f))
+  (let [id (current-level-id world)]
+    (put-level world id (f (level-at world id)))))
 
 ;; World Construction
 
@@ -207,14 +231,6 @@
     (if (= destination :passable)
       [(move-actor world actor-id new-pos) [{:event/type :world/moved :player? player?}]]
       [world [{:event/type :world/blocked :by destination :player? player?}]])))
-
-(defn- next-level-id
-  [world]
-  (inc (:current-level-id world)))
-
-(defn- previous-level-id
-  [world]
-  (dec (:current-level-id world)))
 
 (defn- change-current-level
   [world id lvl]
