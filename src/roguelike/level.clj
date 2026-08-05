@@ -300,10 +300,15 @@
   "Converts a level into a list of tiles and their (x, y) coordinates. This
    allows the caller to view the level as a flat list and perform operations
    like map, reduce, etc."
-  [level]
-  (for [[y row] (map-indexed vector (:tiles level))
-        [x tile] (map-indexed vector row)]
-    (assoc tile :pos [x y])))
+  ([level]
+   (for [[y row] (map-indexed vector (:tiles level))
+         [x tile] (map-indexed vector row)]
+     (assoc tile :pos [x y])))
+  ([level [ox oy] [vw vh]]
+   (let [[lw lh] (dimensions level)]
+     (for [y (range (max 0 oy) (min lh (+ oy vh)))
+           x (range (max 0 ox) (min lw (+ ox vw)))]
+       (assoc (tile-at level [x y]) :pos [x y])))))
 
 (defn all-passable-tiles
   [level]

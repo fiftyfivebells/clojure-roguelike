@@ -1,5 +1,12 @@
 (ns roguelike.input)
 
+(defn drain-input!
+  "Repeatedly polls for input until the queue is empty. This is intended to stop
+  'lagginess' caused by keypresses building up in the input queue while the
+   world is advancing."
+  [screen]
+  (while (some? (.pollInput screen))))
+
 (defn read-key
   "Reads a key from the terminal. Returns a map with information about the key press."
   [screen]
@@ -10,8 +17,9 @@
      :key-type (.getKeyType keystroke)}))
 
 (defn play-mode
-  "Play mode input handler. When the world is in :play mode, it reads movement keys and other commands
-  and then returns a command type depending on the input."
+  "Play mode input handler. When the world is in :play mode, it reads movement
+   keys and other commands and then returns a command type depending on the
+   input."
   [key-event]
   (cond
     (and (:ctrl? key-event) (= (:key key-event) \x))
@@ -35,17 +43,17 @@
     :else {:action/type :ui/none}))
 
 (defn prompt-mode
-  "Prompt mode input handler. When the world is in :prompt mode, it reads the key input from the terminal.
-  If the key pressed is a 'y', it sets the world to the mode provided. Any other key and it returns to the
-  previous mode."
+  "Prompt mode input handler. When the world is in :prompt mode, it reads the
+   key input from the terminal. If the key pressed is a 'y', it sets the world to
+   the mode provided. Any other key and it returns to the previous mode."
   [key-event mode]
   (if (= (:key key-event) \y)
     (:on-yes mode)
     {:action/type :ui/return}))
 
 (defn key->action
-  "Dispatcher: depending on the screen that the world's mode is set to, it delegates to the appropriate
-  handler for the screen type."
+  "Dispatcher: depending on the screen that the world's mode is set to, it
+   delegates to the appropriate  handler for the screen type."
   [pressed mode]
   (case (:screen mode)
     :play (play-mode pressed)

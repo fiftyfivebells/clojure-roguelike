@@ -44,6 +44,10 @@
   (let [id (current-level-id world)]
     (put-level world id (f (level-at world id)))))
 
+(defn current-level-dimensions
+  [world]
+  (level/dimensions (current-level world)))
+
 ;; Time
 
 (defn- current-time
@@ -176,29 +180,36 @@
   (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))]
     (filter #(contains? visible (:pos %)) (active-actors world))))
 
+(defn tile-classifier
+  ([world]
+   (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))
+         curr-lvl (current-level world)
+         known   (level/known-tiles curr-lvl)]
+     (fn [tile]
+       (let [pos (:pos tile)]
+         (cond
+           (contains? visible pos)
+           {:pos pos
+            :state :visible
+            :tile (level/classify-tile (level/tile-at curr-lvl pos))}
+
+           (knowledge/seen? known pos)
+           {:pos pos
+            :state :remembered
+            :tile (level/classify-tile (knowledge/remembered-tile known pos))}
+
+           :else
+           {:pos pos
+            :state :unknown
+            :tile :unknown}))))))
+
 (defn level-view
-  [world]
-  (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))
-        curr-lvl (current-level world)
-        known   (level/known-tiles curr-lvl)
-        classifier (fn [tile]
-                     (let [pos (:pos tile)]
-                       (cond
-                         (contains? visible pos)
-                         {:pos pos
-                          :state :visible
-                          :tile (level/classify-tile (level/tile-at curr-lvl pos))}
-
-                         (knowledge/seen? known pos)
-                         {:pos pos
-                          :state :remembered
-                          :tile (level/classify-tile (knowledge/remembered-tile known pos))}
-
-                         :else
-                         {:pos pos
-                          :state :unknown
-                          :tile :unknown})))]
-    (map classifier (level/level->tile-list curr-lvl))))
+  ([world]
+   (map (tile-classifier world) (level/level->tile-list (current-level world))))
+  ([world origin [vw-max vh-max]]
+   (map (tile-classifier world)
+        (level/level->tile-list
+         (current-level world) origin [vw-max vh-max]))))
 
 ;; Movement
 

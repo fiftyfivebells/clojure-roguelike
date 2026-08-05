@@ -19,14 +19,16 @@
 (defn run-game
   [screen]
   (loop [[game status] (game/advance (game/new-game))]
-    (render/draw-game screen game)
-    (if (= status :awaiting-input)
-      (let [key-event    (input/read-key screen)
-            action       (input/key->action key-event (:mode (:ui game)))
-            updated-game (game/player-action game action)]
-        (when (not= (get-in updated-game [:ui :mode :screen]) :quit)
-          (recur (game/advance updated-game))))
-      (recur (game/advance game)))))
+    (if (not= status :awaiting-input)
+      (recur (game/advance game))
+      (do
+        (render/draw-game screen game)
+        (let [key-event    (input/read-key screen)
+              _ (input/drain-input! screen)
+              action       (input/key->action key-event (:mode (:ui game)))
+              updated-game (game/player-action game action)]
+          (when (not= (get-in updated-game [:ui :mode :screen]) :quit)
+            (recur (game/advance updated-game))))))))
 
 (defn -main [& args]
   (let [screen (get-new-screen)]
