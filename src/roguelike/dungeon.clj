@@ -151,17 +151,12 @@
         :when (not (and (zero? dx) (zero? dy)))]
     [(+ x dx) (+ y dy)]))
 
-(defn- walkable-cell?
-  [level [x y]]
-  (let [[width height] (level/dimensions level)]
-    (level/walkable-at? level [x y])))
-
 ;; Flood fill
 ;; https://en.wikipedia.org/wiki/Flood_fill
 (defn- flood-fill
   "Used for finding the connected component in the new dungeon after it's been
    built. Starts at a given tile and scans all the neigbors of the tile to see
-   if they're floor cells. Returns all the floor cells visited by the fill."
+   if they're floor cells. Returns all the passable cells visited by the fill."
   [level start]
   (loop [visited #{}
          frontier [start]]
@@ -171,7 +166,7 @@
         (if (contains? visited cell)
           (recur visited (rest frontier))
           (let [visited (conj visited cell)
-                new-cells (filter #(and (walkable-cell? level %)
+                new-cells (filter #(and (level/walkable-at? level %)
                                         (not (contains? visited %)))
                                   (neighbors cell))]
             (recur visited (into (rest frontier) new-cells))))))))
@@ -183,9 +178,9 @@
    components returned by this function is > 1, we have disconnected components
    and the level needs to be repaired or it's unwinnable. It finds a component
    by using the flood fill algorithm on an unvisited tile and filling in all
-   connected floor tiles."
+   connected passable tiles."
   [level]
-  (let [unvisited (set (map :pos (level/all-floor-tiles level)))]
+  (let [unvisited (set (map :pos (level/all-passable-tiles level)))]
     (loop [unvisited unvisited
            comps []]
       (if (empty? unvisited)
@@ -286,12 +281,12 @@
         [ctx down] (random-tile-in-room ctx r2)
         ctx (update ctx :level #(-> %
                                     (place-stair :stairs-down down)
-                                    (assoc :stairs/down down)))]
+                                    (level/set-stair-pos :stairs/down down)))]
     (if include-up?
       (let [[ctx up] (random-tile-in-room ctx r1)]
         (update ctx :level #(-> %
                                 (place-stair :stairs-up up)
-                                (assoc :stairs/up up))))
+                                (level/set-stair-pos :stairs/up up))))
       ctx)))
 
 (defn- run-passes

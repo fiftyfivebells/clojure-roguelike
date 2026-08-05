@@ -28,11 +28,11 @@
 
 (defn- next-level-id
   [world]
-  (inc (:current-level-id world)))
+  (inc (current-level-id world)))
 
 (defn- previous-level-id
   [world]
-  (dec (:current-level-id world)))
+  (dec (current-level-id world)))
 
 (defn current-level
   "Returns the currently active level of the world."
@@ -44,6 +44,11 @@
   (let [id (current-level-id world)]
     (put-level world id (f (level-at world id)))))
 
+;; Time
+
+(defn- current-time
+  [world]
+  (:current-time world))
 ;; World Construction
 
 (defn- allocate-entity-id

@@ -192,12 +192,11 @@
    (merge (:door tile-types) {:open? open? :locked? locked?})))
 
 (defn stairs
-  [stair]
-  (println "in level" stair)
-  (case stair
+  [stair-kind]
+  (case stair-kind
     :stairs-up   (:stairs-up tile-types)
     :stairs-down (:stairs-down tile-types)
-    (throw (ex-info "unknown stair type" {:stair stair}))))
+    (throw (ex-info "unknown stair type" {:stair-kind stair-kind}))))
 
 (defn- on-stairs?
   [level [x y] stair-dir]
@@ -219,6 +218,21 @@
 (defn down-stair-pos
   [level]
   (:stairs/down level))
+
+(defn stair-pos
+  [level stair-kind]
+  (case stair-kind
+    :stairs/up   (up-stair-pos level)
+    :stairs/down (down-stair-pos level)
+    (throw (ex-info "unknown stair type" {:stair-kind stair-kind}))))
+
+(defn set-stair-pos
+  [level stair-kind [x y]]
+  (println stair-kind)
+  (when (not (or (= stair-kind :stairs/up)
+                 (= stair-kind :stairs/down)))
+    (throw (ex-info "unknown stair type" {:stair-kind stair-kind})))
+  (assoc level stair-kind [x y]))
 
 (defn get-rooms
   [level]
@@ -273,6 +287,6 @@
         [x tile] (map-indexed vector row)]
     (assoc tile :pos [x y])))
 
-(defn all-floor-tiles
+(defn all-passable-tiles
   [level]
-  (filter #(= (:tile/type %) :floor) (level->tile-list level)))
+  (filter #(passable? %) (level->tile-list level)))
