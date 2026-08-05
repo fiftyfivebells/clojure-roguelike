@@ -11,6 +11,7 @@
   {:bright TextColor$ANSI/WHITE
    :dim    TextColor$ANSI/BLACK_BRIGHT
    :dark   TextColor$ANSI/BLACK
+   :cyan   TextColor$ANSI/CYAN
    :pink   (TextColor$RGB. 255 105 180)
    :green  TextColor$ANSI/GREEN})
 
@@ -18,6 +19,7 @@
   {:wall        "#"
    :floor       "."
    :closed-door "+"
+   :open-door   "'"
    :stairs-down ">"
    :stairs-up   "<"
    :unknown     " "})
