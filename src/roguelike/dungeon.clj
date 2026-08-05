@@ -282,7 +282,7 @@
 (defn- place-stairs
   [ctx include-up?]
   (let [rooms (:rooms ctx)
-        [ctx [r1 r2]] (rng/draw-nth ctx 2 rooms)
+        [ctx [r1 r2]] (rng/draw-distinct ctx 2 rooms)
         [ctx down] (random-tile-in-room ctx r2)
         ctx (update ctx :level #(-> %
                                     (place-stair :stairs-down down)

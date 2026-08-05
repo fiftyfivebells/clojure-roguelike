@@ -131,21 +131,28 @@
   (let [[next-holder value] (draw-int holder 0 2)]
     [next-holder (zero? value)]))
 
-(defn draw-nth
-  "Takes an rng-holder (any map with an :rng-state key, ie. a world of level) and
-   a collection, then returns [holder elem], where elem is a random element from
-   inside the collection and holder has its :rng-state advanced."
-  ([holder n coll]
-   (loop [n n
-          coll coll
-          holder holder
-          acc []]
-     (if (or (zero? n) (empty? coll))
-       [holder acc]
-       (let [[next-holder val] (draw-int holder 0 (count coll))
-             item (nth coll val)
-             new-coll (remove #(= item %) coll)]
-         (recur (dec n) new-coll next-holder (conj acc item))))))
-  ([holder coll]
-   (let [[next-holder val] (draw-int holder 0 (count coll))]
-     [next-holder (nth coll val)])))
+(defn draw-any
+  "Returns [holder elem], where elem is drawn randomly from coll."
+  [holder coll]
+  (let [[holder i] (draw-int holder 0 (count coll))]
+    [holder (nth coll i)]))
+
+(defn draw-distinct
+  "Returns [holder elems], where elems is an n-length collection of elements
+   drawn at random from coll. Elems is returned in draw order. This function
+   throws if n is greater the count of coll."
+  [holder n coll]
+  (when (< (count coll) n)
+    (throw (ex-info "not enough elements to draw from"
+                    {:n n :available (count coll)})))
+  (loop [n n
+         remaining (vec coll)
+         holder holder
+         acc []]
+    (if (zero? n)
+      [holder acc]
+      (let [[holder i] (draw-int holder 0 (count remaining))]
+        (recur (dec n)
+               (into (subvec remaining 0 i) (subvec remaining (inc i)))
+               holder
+               (conj acc (nth remaining i)))))))

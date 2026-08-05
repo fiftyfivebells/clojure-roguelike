@@ -13,7 +13,7 @@
   [world]
   (let [make-action (fn [dir] {:action/type :world/move :delta dir})
         actions (map make-action directions)
-        [world action] (rng/draw-nth world actions)]
+        [world action] (rng/draw-any world actions)]
     [world action]))
 
 (defn- chase
