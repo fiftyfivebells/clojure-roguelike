@@ -153,6 +153,17 @@
   [level]
   (vals (:entities level)))
 
+(defn rebase-entity-time
+  "Takes in a level and a time delta. It the 'rebases' the entities in the level
+   onto the world's current time, so that play can resume as normal and avoid a
+   flurry of entity moves when a player comes back to a previously visited level
+   or avoid entities having turns skipped on newly visited levels."
+  [level delta]
+  (let [updater (fn
+                  [level entity]
+                  (update-entity level (:entity/id entity) #(update % :next-time + delta)))]
+    (reduce updater level (entities-of level))))
+
 ;; Knowledge/FOV
 
 (defn remember-visible
@@ -248,6 +259,14 @@
   [room]
   (let [[rx ry rw rh] (:bounds room)]
     [(+ rx (quot rw 2)) (+ ry (quot rh 2))]))
+
+(defn set-departed-at
+  [level time]
+  (assoc level :departed-at time))
+
+(defn departed-at
+  [level]
+  (get level :departed-at))
 
 (defn solid-level
   ([]

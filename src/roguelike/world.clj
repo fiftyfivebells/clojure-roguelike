@@ -49,6 +49,15 @@
 (defn- current-time
   [world]
   (:current-time world))
+
+(defn- rebase-monster-clocks
+  [world]
+  (update-current-level
+   world
+   (fn [lvl]
+     (let [departed (or (level/departed-at lvl) (current-time world))]
+       (level/rebase-entity-time lvl (- (current-time world) departed))))))
+
 ;; World Construction
 
 (defn- allocate-entity-id
@@ -240,27 +249,44 @@
 (defn- change-current-level
   [world id lvl]
   (-> world
-      (assoc :current-level-id id)
-      (assoc-in [:levels id] lvl)))
+      (set-current-level-id id)
+      (put-level id lvl)))
+
+(defn- set-current-level-departed-at
+  [world]
+  (update-current-level world #(level/set-departed-at % (current-time world))))
 
 (defn- load-or-generate
   [world id]
-  (let [;; levels already visited stay in :levels, so only generate on first arrival
-        new-lvl (or (level-at world id)
-                    (dungeon/generate (:world-seed world) id))]
-    (change-current-level world id new-lvl)))
+  ;; levels already visited stay in :levels, so only generate on first arrival
+  (or (level-at world id)
+      (dungeon/generate (:world-seed world) id)))
+
+(defn- travel
+  [world target-lvl-id arrival-stair-kind]
+  (let [target-lvl (load-or-generate world target-lvl-id)]
+    (-> world
+        (set-current-level-departed-at)
+        (change-current-level target-lvl-id target-lvl)
+        (rebase-monster-clocks)
+        (move-actor (player-id world) (level/stair-pos target-lvl arrival-stair-kind))
+        (observe))))
 
 (defn descend
   [world]
-  (let [next-level-id (inc (current-level-id world))
-        new-world (load-or-generate world next-level-id)]
-    [(move-actor new-world (player-id world) (level/up-stair-pos (current-level new-world))) []]))
+  (let [next-lvl-id (next-level-id world)
+        new-world (travel world next-lvl-id :stairs/up)]
+    [new-world [{:event/type :world/travelled
+                 :direction  :down
+                 :depth      (inc next-lvl-id)}]]))
 
 (defn ascend
   [world]
-  (let [next-level-id (dec (current-level-id world))
-        new-world (load-or-generate world next-level-id)]
-    [(move-actor new-world (player-id world) (level/down-stair-pos (current-level new-world))) []]))
+  (let [prev-lvl-id (previous-level-id world)
+        new-world (travel world prev-lvl-id :stairs/down)]
+    [new-world [{:event/type :world/travelled
+                 :direction  :up
+                 :depth      (inc prev-lvl-id)}]]))
 
 (defn- on-stairs-down?
   [world]
@@ -275,12 +301,13 @@
   (case (:action/type action)
     :world/descend (if (on-stairs-down? world)
                      (descend world)
-                     [world []])
+                     [world [{:event/type :world/invalid-action :action :stairs-down}]])
+
     :world/ascend (if (on-stairs-up? world)
                     (ascend world)
-                    [world []])
+                    [world [{:event/type :world/invalid-action :action :stairs-up}]])
     :world/move (attempt-movement world actor-id (:delta action))
-    :world/wait [world []]
+    :world/wait [world [{:event/type :world/wait}]]
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))

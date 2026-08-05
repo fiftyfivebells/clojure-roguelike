@@ -5,8 +5,8 @@
 (defn- cost-of
   [action]
   (case (:action/type action)
-    :world/descend 0
-    :world/ascend 0
+    :world/descend 10
+    :world/ascend 10
     :world/move 10
     :world/wait 10
     (throw (ex-info "this action doesn't exist" {:action action}))))
