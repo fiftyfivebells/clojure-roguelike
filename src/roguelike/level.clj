@@ -7,6 +7,10 @@
 ;; [ [. . . .]
 ;;   [. . . .]
 ;;   [. . . .]]
+;; :rooms is a vector of room dimensons and locations
+;; :known is a vector of tiles the player knows (has seen or visited)
+;; :stairs/down and :stairs/up are the [x y] coord of the respective stair tile
+;; :departed-at is the world time at the point when the player left the level
 
 ;; Bounds
 
@@ -64,12 +68,12 @@
   (let [[new-y new-x] (resolve-coords level [x y])]
     (update-in level [:tiles new-y new-x] f)))
 
-(def ^:private passable-classifications #{:floor :open-door :stairs-down :stairs-up})
+(def ^:private passable-classification #{:floor :open-door :stairs-down :stairs-up})
 (def ^:private transparent-classification #{:floor :open-door :stairs-down :stairs-up})
 
 (defn classify-tile
   "Returns the semantic classification of a tile: :floor, :wall, :closed-door,
-   :open-door, or :unknown for an unrecognized tile type. This should be the one
+   etc, or :unknown for an unrecognized tile type. This should be the one
    place that translates a tile's raw :tile/type into the vocabulary callers
    should build on."
   [tile]
@@ -85,7 +89,7 @@
   "Consumes a tile and returns a boolean telling whether the tile can be passed
    through or not."
   [tile]
-  (contains? passable-classifications (classify-tile tile)))
+  (contains? passable-classification (classify-tile tile)))
 
 (defn transparent?
   "Consumes a tile and returns a boolean telling whether the tile can be seen through or not. A
