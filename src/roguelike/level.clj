@@ -239,7 +239,6 @@
 
 (defn set-stair-pos
   [level stair-kind [x y]]
-  (println stair-kind)
   (when (not (or (= stair-kind :stairs/up)
                  (= stair-kind :stairs/down)))
     (throw (ex-info "unknown stair type" {:stair-kind stair-kind})))

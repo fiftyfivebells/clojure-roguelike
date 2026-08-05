@@ -65,7 +65,7 @@
 (deftest resolve-action-wait-reschedules-and-returns-no-events
   (let [w                    (make-world :current-time 0)
         [new-world events]   (scheduler/resolve-action w 0 {:action/type :world/wait})]
-    (is (= [] events))
+    (is (= [{:event/type :world/wait}] events))
     (is (= 10 (:next-time (:player new-world))))))
 
 (deftest resolve-action-move-success-moves-actor-and-reschedules
@@ -167,12 +167,11 @@
         monster (make-monster 1 {:next-time 5 :pos [1 1]})
         w       (make-world :player player :monsters [monster] :next-tick 1000 :current-time 0)]
     (with-redefs [ai/decide (fn [world _] [world {:action/type :world/wait}])]
-      (let [result (scheduler/advance w)]
-        (let [[new-world events status] result]
-          (is (= :acted status))
-          (is (= [] events))
-          (is (= 15 (:next-time (level/get-entity (world/current-level new-world) 1)))
-              "monster rescheduled at current-time (5) + wait cost (10)"))))))
+      (let [[new-world events status] (scheduler/advance w)]
+        (is (= :acted status))
+        (is (= [{:event/type :world/wait}] events))
+        (is (= 15 (:next-time (level/get-entity (world/current-level new-world) 1)))
+            "monster rescheduled at current-time (5) + wait cost (10)")))))
 
 (deftest advance-monster-turn-moves-monster-when-ai-decides-move
   (let [player  (make-player {:next-time 1000})
