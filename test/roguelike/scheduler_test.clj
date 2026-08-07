@@ -14,7 +14,7 @@
 
 (defn- make-monster
   [id overrides]
-  (merge {:entity/id id :entity/type :generic-monster :pos [2 2] :next-time 0} overrides))
+  (merge {:entity/id id :entity/type :monster :pos [2 2] :next-time 0} overrides))
 
 (defn- make-world
   "Builds a minimal world for scheduler tests: an 80x22 test-level bordered by walls,
