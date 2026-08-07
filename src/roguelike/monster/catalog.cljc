@@ -7,6 +7,7 @@
   {:monster/flags #{:opens-doors}
 
    :species {:orc/goblin {:depth 1
+                          :group/size [1 1]
                           :sight/radius 6
                           :hp 10}}})
 
@@ -14,15 +15,17 @@
   {:monster/flags #{:breeds}
 
    :species {:worm-mass/white {:depth 0
+                               :group/size [1 1]
                                :sight/radius 2
                                :hp 5}}})
 
 (def ^:private canines
   {:monster/flags #{:animal}
 
-   :species (:canine/wild-dog {:depth 0
+   :species {:canine/wild-dog {:depth 0
+                               :group/size [1 8]
                                :sight/radius 8
-                               :hp 8})})
+                               :hp 8}}})
 
 (def genera
   {:orc       orcs
