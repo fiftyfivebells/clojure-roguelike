@@ -75,8 +75,8 @@
   (doseq [entity (world/visible-actors world)]
     (let [[sx sy] (mapv world->screen (:pos entity) origin)]
       (when (and (< -1 sx vw) (< -1 sy vh))
-        (let [glyph (appearance/entity->glyph (world/entity-type entity))
-              color (appearance/entity->color (world/entity-type entity))]
+        (let [glyph (appearance/entity->glyph entity)
+              color (appearance/entity->color entity)]
           (.setForegroundColor tg (style->color color))
           (.putString tg sx (+ start-row sy) (str glyph)))))))
 
