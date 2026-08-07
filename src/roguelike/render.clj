@@ -1,12 +1,11 @@
 (ns roguelike.render
-  (:require [roguelike.world :as world])
+  (:require [roguelike.world :as world]
+            [roguelike.ui.appearance :as appearance])
   (:import [com.googlecode.lanterna TextColor$ANSI TextColor$RGB]))
 
-(def ^:private state->style
-  {:visible    :bright
-   :remembered :dim
-   :unknown    :dark})
-
+;; TODO: will probably need to untangle this at some point. I've got two things
+;; conflated: hue and visibility. Probably :bright/:dim/:dark need to be
+;; modifiers of colors rather than in the color table themselves.
 (def ^:private style->color
   {:bright TextColor$ANSI/WHITE
    :dim    TextColor$ANSI/BLACK_BRIGHT
@@ -14,23 +13,6 @@
    :cyan   TextColor$ANSI/CYAN
    :pink   (TextColor$RGB. 255 105 180)
    :green  TextColor$ANSI/GREEN})
-
-(def ^:private tile->glyph
-  {:wall        "#"
-   :floor       "."
-   :closed-door "+"
-   :open-door   "'"
-   :stairs-down ">"
-   :stairs-up   "<"
-   :unknown     " "})
-
-(def ^:private entity->glyph
-  {:player          "@"
-   :generic-monster "m"})
-
-(def ^:private entity->style
-  {:player          :pink
-   :generic-monster :green})
 
 (defn- clamp
   [point minimum maximum]
@@ -83,8 +65,8 @@
     (doseq [sy (range vh)
             sx (range vw)]
       (let [tile (view (mapv + origin [sx sy]))
-            glyph (tile->glyph (:tile tile))
-            style (state->style (:state tile))]
+            glyph (appearance/tile-glyph (:tile tile))
+            style (appearance/state-style (:state tile))]
         (.setForegroundColor tg (style->color style))
         (.putString tg sx (+ start-row sy) (str glyph))))))
 
@@ -93,9 +75,9 @@
   (doseq [entity (world/visible-actors world)]
     (let [[sx sy] (mapv world->screen (:pos entity) origin)]
       (when (and (< -1 sx vw) (< -1 sy vh))
-        (let [glyph (entity->glyph (world/entity-type entity))
-              style (entity->style (world/entity-type entity))]
-          (.setForegroundColor tg (style->color style))
+        (let [glyph (appearance/entity->glyph (world/entity-type entity))
+              color (appearance/entity->color (world/entity-type entity))]
+          (.setForegroundColor tg (style->color color))
           (.putString tg sx (+ start-row sy) (str glyph)))))))
 
 (defn draw-game
