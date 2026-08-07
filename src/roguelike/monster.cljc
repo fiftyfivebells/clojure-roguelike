@@ -21,7 +21,9 @@
   (get resolved species))
 
 (defn species-at-depth
-  "Species that have started appearing by the given depth, as level ids."
+  "Species that have started appearing by the given depth, as level ids.
+   TODO: this currently just takes any monster whose :depth is <= the current
+   level depth. This is OK for now but not robust enough for a real solution."
   [depth]
   (into [] (comp (filter (fn [[_ sp]] (<= (:depth sp) depth)))
                  (map key))
