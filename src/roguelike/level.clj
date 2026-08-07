@@ -11,6 +11,9 @@
 ;; :known is a vector of tiles the player knows (has seen or visited)
 ;; :stairs/down and :stairs/up are the [x y] coord of the respective stair tile
 ;; :departed-at is the world time at the point when the player left the level
+;; :rng-state is the level's own rng, seeded when the level is first populated
+;;   and advanced by each later wave of monsters, so reinforcements continue the
+;;   stream instead of re-deriving it and repeating a previous wave
 
 ;; Bounds
 
@@ -266,6 +269,18 @@
 (defn departed-at
   [level]
   (get level :departed-at))
+
+;; Rng
+;; A level with this key set is a valid rng holder, so it can be passed straight
+;; to the rng draw functions.
+
+(defn rng-state
+  [level]
+  (get level :rng-state))
+
+(defn set-rng-state
+  [level state]
+  (assoc level :rng-state state))
 
 (defn solid-level
   ([]
