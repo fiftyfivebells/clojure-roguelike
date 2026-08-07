@@ -3,6 +3,7 @@
             [roguelike.level :as level]
             [roguelike.rng :as rng]
             [roguelike.fov :as fov]
+            [roguelike.spawn :as spawn]
             [roguelike.dungeon :as dungeon]))
 
 ;; Levels
@@ -73,17 +74,21 @@
 
     [next-entity-id (update world :next-entity-id inc)]))
 
-;; TODO: this is hard-coded and simple for now, but there will eventually be an EDN file with monster
-;; templates that this pulls from.
-(defn spawn-entity
-  [world]
-  (let [[next-id next-world] (allocate-entity-id world)
-        monster {:entity/id next-id
-                 :entity/type :generic-monster
-                 :pos (level/room-center (second (level/get-rooms (current-level world))))
-                 :sight/radius 2  ;; TODO: just a random magic number, fix to be more robust later
-                 :next-time (:current-time next-world)}]
-    (update-current-level next-world #(level/add-entity % monster))))
+(defn- populate-level
+  "Spawns this level's monsters into lvl, giving each one an id from the world's
+   counter and a clock set to now. Reserved positions are left empty so the
+   player never lands on top of a monster. The spawn rng is left on the level so
+   later waves of monsters pick up where this one stopped. Returns [world lvl]."
+  [world lvl lvl-id reserved]
+  (let [[ctx monsters] (spawn/monsters-for-level (:world-seed world) lvl-id lvl reserved)
+        [world lvl] (reduce (fn [[world lvl] monster]
+                              (let [[id world] (allocate-entity-id world)]
+                                [world (level/add-entity lvl (assoc monster
+                                                                    :entity/id id
+                                                                    :next-time (current-time world)))]))
+                            [world lvl]
+                            monsters)]
+    [world (level/set-rng-state lvl (:rng-state ctx))]))
 
 ;; Actors
 
@@ -268,14 +273,17 @@
   (update-current-level world #(level/set-departed-at % (current-time world))))
 
 (defn- load-or-generate
-  [world id]
-  ;; levels already visited stay in :levels, so only generate on first arrival
-  (or (level-at world id)
-      (dungeon/generate (:world-seed world) id)))
+  "Returns [world lvl]. Levels already visited stay in :levels, so generating
+   and populating only happen on first arrival."
+  [world id arrival-stair-kind]
+  (if-let [lvl (level-at world id)]
+    [world lvl]
+    (let [lvl (dungeon/generate (:world-seed world) id)]
+      (populate-level world lvl id #{(level/stair-pos lvl arrival-stair-kind)}))))
 
 (defn- travel
   [world target-lvl-id arrival-stair-kind]
-  (let [target-lvl (load-or-generate world target-lvl-id)]
+  (let [[world target-lvl] (load-or-generate world target-lvl-id arrival-stair-kind)]
     (-> world
         (set-current-level-departed-at)
         (change-current-level target-lvl-id target-lvl)
@@ -343,7 +351,8 @@
                 :next-entity-id 1
                 :next-tick 10
                 :current-time 0
-                :rng-state (rng/make seed)}]
+                :rng-state (rng/make seed)}
+         [world first-dungeon] (populate-level world first-dungeon 0 #{player-start-pos})]
      (-> world
-         (spawn-entity)
+         (put-level 0 first-dungeon)
          (observe)))))
