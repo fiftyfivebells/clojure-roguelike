@@ -8,8 +8,8 @@
 ;; What share of a level's rooms hold a group. This is a fraction rather than a
 ;; fixed count so density stays put as levels grow: room count scales with level
 ;; area.
-(def ^:private min-occupied-rooms 1/4)
-(def ^:private max-occupied-rooms 1/2)
+(def ^:private min-occupied-rooms 0.25)
+(def ^:private max-occupied-rooms 0.50)
 
 (defn- draw-group-count
   "Groups to place, given how many rooms the level has. Scatter puts at most one
