@@ -27,10 +27,12 @@
   [entity]
   (case (:entity/type entity)
     :player "@"
-    :monster (monster/glyph-of (:monster/genus entity))))
+    :monster (monster/glyph-of (:monster/genus entity))
+    "?"))
 
 (defn entity->color
   [entity]
   (case (:entity/type entity)
     :player :pink
-    :monster (monster/color-of (:monster/species entity))))
+    :monster (monster/color-of (:monster/species entity))
+    :pink))

@@ -23,11 +23,11 @@
 
 (defn name-of
   [species]
-  (:name (species->appearance species) :unknown))
+  (:name (species->appearance species) "unknown monsters"))
 
 (defn color-of
   [species]
-  (:color (species->appearance species) :pink))
+  (:color (species->appearance species) :bright))
 
 (defn glyph-of
   [genus]
