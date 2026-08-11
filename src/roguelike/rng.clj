@@ -135,6 +135,42 @@
   (let [[next-holder value] (draw-int holder 0 2)]
     [next-holder (zero? value)]))
 
+(defn roll-dice
+  "Rolls dice. Takes in the number of dice and the number of sides per die and
+   returns [holder value] where value is the result of rolling each die."
+  [holder {:keys [dice sides]}]
+  (when (or (< dice 1)
+            (< sides 1))
+    (throw (ex-info
+            "invalid dice: dice and sides should greater than 0"
+            {:dice dice :sides sides})))
+  (loop [holder holder
+         value 0
+         i dice]
+    (if (zero? i)
+      [holder value]
+      (let [[next-holder next-val] (draw-int holder 1 (inc sides))]
+        (recur next-holder (+ value next-val) (dec i))))))
+
+(defn shuffle-coll
+  "Shuffles the collection. Takes in a collection and uses the rng-state on the
+   holder to reorder the collection."
+  [holder coll]
+  (let [unshuffled (vec coll)
+        cnt (count unshuffled)]
+    (if (< cnt 2)
+      [holder unshuffled]
+      (loop [i (dec cnt)
+             current-holder holder
+             shuffled unshuffled]
+        (if (zero? i)
+          [current-holder shuffled]
+          (let [[next-holder j] (draw-int current-holder 0 (inc i))
+                next-shuffled (assoc shuffled
+                                     i (get shuffled j)
+                                     j (get shuffled i))]
+            (recur (dec i) next-holder next-shuffled)))))))
+
 (defn draw-any
   "Returns [holder elem], where elem is drawn randomly from coll."
   [holder coll]
