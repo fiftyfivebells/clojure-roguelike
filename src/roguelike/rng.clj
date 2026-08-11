@@ -121,6 +121,10 @@
    in the provided range (max-val exclusive) and holder has its :rng-state
    advanced."
   [holder min-val max-val]
+  (when (>= min-val max-val)
+    (throw (ex-info
+            "invalid range: min-val should be less than max-val"
+            {:min-val min-val :max-val max-val})))
   (let [[state value] (rand-int-range (:rng-state holder) min-val max-val)]
     [(assoc holder :rng-state state) value]))
 
