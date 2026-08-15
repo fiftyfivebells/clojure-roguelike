@@ -1,5 +1,6 @@
 (ns roguelike.monster
-  (:require [roguelike.monster.catalog :as catalog]))
+  (:require [roguelike.monster.catalog :as catalog]
+            [roguelike.rng :as rng]))
 
 (defn- resolve-genus
   [[genus-key {:keys [species] :as genus}]]
@@ -37,6 +38,11 @@
 (defn instantiate
   "Builds a live monster entity at pos. The caller owns :entity/id and
    :next-time, so neither is set here."
-  [species pos]
-  (-> (apply dissoc (template species) spawn-only)
-      (assoc :entity/type :monster :pos pos)))
+  [ctx species pos]
+  (let [monster (template species)
+        [ctx hp] (rng/draw-near ctx (:hp monster) (:hp-variance monster))]
+    [ctx (-> (apply dissoc (template species) spawn-only)
+             (assoc :entity/type :monster
+                    :pos pos
+                    :hp/current hp
+                    :hp/max hp))]))
