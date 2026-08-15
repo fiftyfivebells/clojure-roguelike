@@ -177,6 +177,16 @@
   (let [[holder i] (draw-int holder 0 (count coll))]
     [holder (nth coll i)]))
 
+(defn draw-near
+  "Returns [holder value], where value is drawn from a range around the base.
+   The range is determined by multiplying the base by the pct and taking from a
+   range from [min, max] (inclusive)."
+  [holder base pct]
+  (let [spread (int (* base pct))
+        low (max 1 (- base spread))
+        high (+ base spread)]
+    (draw-int holder low (inc high))))
+
 (defn draw-distinct
   "Returns [holder elems], where elems is an n-length collection of elements
    drawn at random from coll. Elems is returned in draw order. This function
