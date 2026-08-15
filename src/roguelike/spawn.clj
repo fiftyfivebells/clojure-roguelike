@@ -2,7 +2,6 @@
   (:require [roguelike.level :as level]
             [roguelike.monster :as monster]
             [roguelike.pathfinding :as pathfinding]
-            [roguelike.placement :as placement]
             [roguelike.rng :as rng]))
 
 ;; What share of a level's rooms hold a group. This is a fraction rather than a
@@ -46,40 +45,63 @@
        (filter #(open? lvl claimed %))
        (take n)))
 
+(defn open-positions
+  [lvl claimed]
+  (let [[w h] (level/dimensions lvl)]
+    (for [x (range w)
+          y (range h)
+          :let [pos [x y]]
+          :when (open? lvl claimed pos)]
+      pos)))
+
 (defn- place-group
   [ctx lvl claimed eligible anchor]
   (let [[ctx species] (rng/draw-any ctx eligible)
         [lo hi] (monster/group-size species)
-        [ctx n] (rng/draw-int ctx lo (inc hi))]
-    [ctx (mapv #(monster/instantiate species %)
-               (group-positions lvl claimed anchor n))]))
+        [ctx n] (rng/draw-int ctx lo (inc hi))
+        make-monster (fn [[ctx acc] pos]
+                        (let [[ctx monster] (monster/instantiate ctx species pos)]
+                          [ctx (conj acc monster)]))]
+    (reduce make-monster
+            [ctx []]
+            (group-positions lvl claimed anchor n))))
+
+(defn derive-monster-budget
+  [ctx lvl-id open]
+  (let [monster-min (int (/ (count open) 200))
+        [ctx rand-int] (rng/draw-int ctx 2 8)
+        depth (int (/ lvl-id 3))
+        depth-cnt (max 2 (min depth 10))]
+    [ctx (+ monster-min rand-int depth-cnt)]))
 
 (defn monsters-for-level
-  "Returns [ctx monsters], where monsters is a vector of monster entity maps for
-   lvl and ctx holds the spawn rng advanced past this population. Callers persist
-   that state on the level so later waves continue the stream rather than
-   re-deriving it and repeating this one.
-
-   Placement is deterministic for a given world-seed and level-id. Reserved is a
-   set of positions to leave clear, which is how the player's arrival tile is
-   kept free. The entities carry no :entity/id or :next-time; those are added by
-   world at the call site."
   [world-seed level-id lvl reserved]
   (let [ctx {:rng-state (rng/make (rng/mix world-seed :spawn level-id))}
         eligible (monster/species-at-depth level-id)]
     (if (empty? eligible)
       [ctx []]
-      (let [rooms (level/get-rooms lvl)
-            [ctx group-count] (draw-group-count ctx (count rooms))
-            [ctx anchors] (placement/scatter ctx rooms group-count
-                                             room-positions
-                                             #(open? lvl reserved %))
-            [ctx _ monsters]
-            (reduce (fn [[ctx claimed acc] anchor]
-                      (let [[ctx group] (place-group ctx lvl claimed eligible anchor)]
-                        [ctx
-                         (into claimed (map :pos) group)
-                         (into acc group)]))
-                    [ctx (set reserved) []]
-                    anchors)]
-        [ctx monsters]))))
+      (let [[ctx shuffled] (rng/shuffle-coll ctx (open-positions lvl reserved))
+            [ctx monster-budget] (derive-monster-budget ctx level-id shuffled)]
+        (loop [ctx ctx
+               claimed (set reserved)
+               acc []
+               monster-budget monster-budget
+               cursor 0]
+          (cond
+            (<= monster-budget 0)
+            [ctx acc]
+
+            (>= cursor (count shuffled))
+            [ctx acc]
+
+            (claimed (shuffled cursor))
+            (recur ctx claimed acc monster-budget (inc cursor))
+
+            :else
+            (let [anchor (shuffled cursor)
+                  [ctx group] (place-group ctx lvl claimed eligible anchor)]
+              (recur ctx
+                     (into claimed (map :pos) group)
+                     (into acc group)
+                     (- monster-budget (count group))
+                     (inc cursor)))))))))
