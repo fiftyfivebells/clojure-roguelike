@@ -301,8 +301,8 @@
 
 (defn generate
   [world-seed level-id]
-  (let [width  80  ;; TODO: this and height hard-coded for now, come back to this
-        height 22
+  (let [width  198  ;; TODO: this and height hard-coded for now, come back to this
+        height 66
         lvl-seed  (rng/mix world-seed :layout level-id)
         rng-state (rng/make lvl-seed)
         include-up? (not= 0 level-id)
