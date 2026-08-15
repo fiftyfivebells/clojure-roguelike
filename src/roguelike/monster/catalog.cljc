@@ -9,12 +9,14 @@
    :species {:orc/goblin {:depth 1
                           :group/size [3 5]
                           :sight/radius 6
-                          :hp {:dice 2 :sides 4}}
+                          :hp 8
+                          :hp-variance 0.1}
 
              :orc/hill-orc {:depth 3
                             :group/size [3 5]
                             :sight/radius 6
-                            :hp {:dice 3 :sides 6}}}})
+                            :hp 18
+                            :hp-variance 0.1}}})
 
 (def ^:private worm-masses
   {:monster/flags #{:breeds}
@@ -22,7 +24,8 @@
    :species {:worm-mass/white {:depth 0
                                :group/size [1 1]
                                :sight/radius 2
-                               :hp {:dice 1 :sides 6}}}})
+                               :hp 6
+                               :hp-variance 0.1}}})
 
 (def ^:private canines
   {:monster/flags #{:animal}
@@ -30,7 +33,8 @@
    :species {:canine/wild-dog {:depth 0
                                :group/size [4 7]
                                :sight/radius 8
-                               :hp {:dice 2 :sides 4}}}})
+                               :hp 6
+                               :hp-variance 0.2}}})
 
 (def genera
   {:orc       orcs
