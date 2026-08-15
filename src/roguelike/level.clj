@@ -286,8 +286,8 @@
   ([]
    (solid-level 80 22))
   ([width height]
-   (let [tiles (vec (for [y (range height)]
-                      (vec (for [x (range width)]
+   (let [tiles (vec (for [_ (range height)]
+                      (vec (for [_ (range width)]
                              (:wall tile-types)))))]
      {:tiles tiles
       :entities {}
