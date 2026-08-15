@@ -274,12 +274,19 @@
 
 (defn- load-or-generate
   "Returns [world lvl]. Levels already visited stay in :levels, so generating
-   and populating only happen on first arrival."
+   and populating only happen on first arrival. When generating, this function
+   avoids spawning monsters within sight of the player's arrival location."
   [world id arrival-stair-kind]
   (if-let [lvl (level-at world id)]
     [world lvl]
-    (let [lvl (dungeon/generate (:world-seed world) id)]
-      (populate-level world lvl id #{(level/stair-pos lvl arrival-stair-kind)}))))
+    (let [lvl (dungeon/generate (:world-seed world) id)
+          arrival-stairs (level/stair-pos lvl arrival-stair-kind)
+          opaque? (partial level/opaque-at? lvl)
+          seen (fov/visible-cells
+                opaque?
+                arrival-stairs
+                (sight-radius world (player-id world)))]
+      (populate-level world lvl id seen))))
 
 (defn- travel
   [world target-lvl-id arrival-stair-kind]
