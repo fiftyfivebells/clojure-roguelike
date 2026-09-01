@@ -31,6 +31,10 @@
       (assoc :current-msg message)
       (update :messages conj message)))
 
+(defn clear-message
+  [ui]
+  (assoc ui :current-msg nil))
+
 (defn- blocked-message
   [by]
   (case by

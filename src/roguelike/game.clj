@@ -22,7 +22,7 @@
   (case (namespace (:action/type action))
     "world"
     (let [[new-world events] (scheduler/player-action (:world game) action)
-          new-ui             (ui/apply-events (:ui game) events)]
+          new-ui             (ui/apply-events (ui/clear-message (:ui game)) events)]
       (-> game
           (assoc :world new-world)
           (assoc :ui new-ui)))
