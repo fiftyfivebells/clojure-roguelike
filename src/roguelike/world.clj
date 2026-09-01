@@ -1,5 +1,6 @@
 (ns roguelike.world
-  (:require [roguelike.knowledge :as knowledge]
+  (:require [roguelike.combat :as combat]
+            [roguelike.knowledge :as knowledge]
             [roguelike.level :as level]
             [roguelike.rng :as rng]
             [roguelike.fov :as fov]
@@ -253,13 +254,63 @@
             :closed-door :door
             :unknown)))
 
+(defn- describe
+  [world entity]
+  (if (player? world (:entity/id entity))
+    {:player? true}
+    {:id (:entity/id entity) :species (:monster/species entity)}))
+
+(defn- apply-attack
+  [world attack attacker defender]
+  (let [base-result {:attacker (describe world attacker)
+                     :defender (describe world defender)}]
+    (if-not (:hit? attack)
+      [world (merge base-result {:event/type :world/missed
+                                 :hit? false
+                                 :method (:method attack)})]
+      (let [attack-result (merge attack base-result)]
+        (if (:fatal? attack)
+          [world (assoc attack-result :event/type :world/killed)]
+          (let [new-hp (- (:hp/current defender) (:damage attack))
+                world (update-actor world
+                                    (:entity/id defender)
+                                    #(assoc % :hp/current new-hp))]
+            [world (assoc attack-result :event/type :world/hit)]))))))
+
+(defn- apply-attacks
+  [world attacks attacker defender]
+  (let [reducer (fn
+                  [[world events] attack]
+                  (let [defender (get-actor world (:entity/id defender))
+                        [world event] (apply-attack world attack attacker defender)]
+                    [world (conj events event)]))]
+    (reduce reducer [world []] attacks)))
+
+(defn- attempt-attack
+  [world actor-id new-pos]
+  (let [attacker (get-actor world actor-id)
+        defender (entity-at world new-pos)]
+    (if (and (not (player? world actor-id))
+             (not (player? world (:entity/id defender))))
+      [world [{:event/type :world/blocked :by :actor :player? false}]]
+      (let [atk-profile (combat/attacker-profile attacker)
+            def-profile (combat/defender-profile defender)
+            [world resolved] (combat/resolve-attacks world atk-profile def-profile) ]
+        (apply-attacks world resolved attacker defender)))))
+
 (defn attempt-movement
   [world actor-id delta]
   (let [new-pos (get-proposed-coords world actor-id delta)
         destination (classify-destination world new-pos)
         player? (player? world actor-id)]
-    (if (= destination :passable)
+    (cond
+      (= destination :passable)
       [(move-actor world actor-id new-pos) [{:event/type :world/moved :player? player?}]]
+
+      (= destination :actor)
+      (attempt-attack world actor-id new-pos)
+
+      :else
       [world [{:event/type :world/blocked :by destination :player? player?}]])))
 
 (defn- change-current-level
@@ -352,7 +403,12 @@
                          :entity/type :player
                          :pos player-start-pos
                          :sight/radius 4  ;; TODO: just a random magic number, fix to be more robust later
-                         :next-time 0}
+                         :next-time 0
+                         :hp 15
+                         :max-hp 15
+                         :armor-class 0
+                         :evasion 10
+                         :to-hit 100}
                 :current-level-id 0
                 :levels {0 first-dungeon}
                 :next-entity-id 1
@@ -363,3 +419,10 @@
      (-> world
          (put-level 0 first-dungeon)
          (observe)))))
+
+(defn status
+  "Gives some helpful info about the current world. Used for UI display info."
+  [world]
+  {:current-hp (get-in world [:player :hp])
+   :max-hp     (get-in world [:player :max-hp])
+   :level (current-level-id world)})

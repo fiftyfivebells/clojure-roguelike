@@ -1,4 +1,6 @@
-(ns roguelike.ui)
+(ns roguelike.ui 
+  (:require
+    [roguelike.ui.appearance.monster :as monster]))
 
 (defn new-ui
   []
@@ -34,6 +36,22 @@
 (defn clear-message
   [ui]
   (assoc ui :current-msg nil))
+
+(defn- attack-message
+  [attack]
+  (let [player? (get-in attack [:attacker :player?])
+        monster-name (monster/name-of
+                      (:species (get attack (if player? :defender :attacker))))
+        atk-name (if player?
+                   "Your"
+                   (str "The " monster-name "'s"))
+        method (name (:method attack))
+        target (if-not player?
+                 "you"
+                 (str "the " monster-name))]
+    (if-not (:hit? attack)
+      (str atk-name " " method " missed " target ".")
+      (str atk-name " " method " hits " target "."))))
 
 (defn- blocked-message
   [by]
@@ -76,6 +94,12 @@
     (if (:player? event)
       (add-message ui (blocked-message (:by event)))
       ui)
+
+    :world/hit
+    (add-message ui (attack-message event))
+
+    :world/missed
+    (add-message ui (attack-message event))
 
     :world/wait
     (add-message ui "You sit patiently and wait.")
