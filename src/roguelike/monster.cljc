@@ -15,7 +15,7 @@
 
 ;; :depth and :group/size drive spawning but are not live entity state, so they
 ;; get stripped when a template becomes an entity.
-(def ^:private spawn-only [:depth :group/size])
+(def ^:private spawn-only [:depth :group/size :hp :hp-variance])
 
 (defn template
   [species]

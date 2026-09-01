@@ -10,13 +10,19 @@
                           :group/size [3 5]
                           :sight/radius 6
                           :hp 8
-                          :hp-variance 0.1}
+                          :hp-variance 0.1
+                          :to-hit 1
+                          :armor-class 4
+                          :attacks [{:method :swing :effect :physical :dice 1 :sides 8}]}
 
              :orc/hill-orc {:depth 3
                             :group/size [3 5]
                             :sight/radius 6
                             :hp 18
-                            :hp-variance 0.1}}})
+                            :hp-variance 0.1
+                            :to-hit 2
+                            :armor-class 8
+                            :attacks [{:method :swing :effect :physical :dice 1 :sides 10}]}}})
 
 (def ^:private worm-masses
   {:monster/flags #{:breeds}
@@ -25,7 +31,10 @@
                                :group/size [1 1]
                                :sight/radius 2
                                :hp 6
-                               :hp-variance 0.1}}})
+                               :hp-variance 0.1
+                               :to-hit 1
+                               :armor-class 1
+                               :attacks [{:method :wriggle :effect :physical :dice 1 :sides 4}]}}})
 
 (def ^:private canines
   {:monster/flags #{:animal}
@@ -34,7 +43,10 @@
                                :group/size [4 7]
                                :sight/radius 8
                                :hp 6
-                               :hp-variance 0.2}}})
+                               :hp-variance 0.2
+                               :to-hit 1
+                               :armor-class 1
+                               :attacks [{:method :bite :effect :physical :dice 1 :sides 2}]}}})
 
 (def genera
   {:orc       orcs
