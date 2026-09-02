@@ -114,6 +114,11 @@
   (let [player (:player world)]
     (= id (:entity/id player))))
 
+(defn player-dead?
+  [world]
+  (let [player (player-entity world)]
+    (zero? (:hp/current player))))
+
 (defn active-actors
   "Gets a list of all active entities in the current level. Essentially just conjs the player onto the list
   of entities for the level."
