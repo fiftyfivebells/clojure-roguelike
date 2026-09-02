@@ -51,10 +51,15 @@
     (:on-yes mode)
     {:action/type :ui/return}))
 
+(defn dead-mode
+  [key-event]
+  {:action/type :ui/quit})
+
 (defn key->action
   "Dispatcher: depending on the screen that the world's mode is set to, it
    delegates to the appropriate  handler for the screen type."
   [pressed mode]
   (case (:screen mode)
     :play (play-mode pressed)
+    :dead (dead-mode pressed)
     :prompt (prompt-mode pressed mode)))
