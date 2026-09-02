@@ -380,6 +380,12 @@
   [world]
   (level/on-stairs-up? (current-level world) (player-pos world)))
 
+(defn- heal-player
+  [world]
+  (update-actor world (player-id world)
+                (fn [player]
+                  (update player :hp/current #(min (:hp/max player) (inc %))))))
+
 (defn update-world
   [world actor-id action]
   (case (:action/type action)
@@ -391,7 +397,9 @@
                     (ascend world)
                     [world [{:event/type :world/invalid-action :action :stairs-up}]])
     :world/move (attempt-movement world actor-id (:delta action))
-    :world/wait [world [{:event/type :world/wait}]]
+
+    :world/wait (let [world (if (player? world actor-id) (heal-player world) world)]
+                  [world [{:event/type :world/wait}]])
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))

@@ -106,7 +106,7 @@
       (-> ui
           (add-message "You have died. Press any key to continue.")
           (assoc :mode {:screen :dead}))
-      (add-message ui (str "The " (monster/name-of (:species (:defender event))) "dies.")))
+      (add-message ui (str "The " (monster/name-of (:species (:defender event))) " dies.")))
 
     :world/wait
     (add-message ui "You sit patiently and wait.")
