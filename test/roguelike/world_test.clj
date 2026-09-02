@@ -1,8 +1,14 @@
 (ns roguelike.world-test
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
             [roguelike.level :as level]
             [roguelike.world :as world]))
+
+(defn- make-player
+  [overrides]
+  (merge {:entity/id 0 :entity/type :player :pos [1 1] :next-time 0
+          :hp/current 10 :hp/max 10}
+         overrides))
 
 (deftest world-round-trips-through-edn
   (let [walked (reduce (fn [w delta]
@@ -47,3 +53,17 @@
            (level/entities-of (world/current-level again))))
     (is (= (:next-entity-id down) (:next-entity-id again))
         "no fresh ids are handed out on a revisit")))
+
+;;; player-dead?
+
+(deftest player-dead-is-false-above-zero-hp
+  (testing "a player with hp remaining is not dead"
+    (is (false? (world/player-dead? {:player (make-player {:hp/current 1})})))))
+
+(deftest player-dead-is-true-at-zero-hp
+  (testing "hp/current 0 is the dead threshold"
+    (is (true? (world/player-dead? {:player (make-player {:hp/current 0})})))))
+
+(deftest player-dead-is-true-below-zero-hp
+  (testing "negative hp/current (overkill damage) should also count as dead"
+    (is (true? (world/player-dead? {:player (make-player {:hp/current -5})})))))
