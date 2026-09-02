@@ -260,6 +260,12 @@
     {:player? true}
     {:id (:entity/id entity) :species (:monster/species entity)}))
 
+(defn- resolve-death
+  [world defender]
+  (if (:player? defender)
+    (update-actor world (player-id world) #(assoc % :hp/current 0 :dead? true))
+    (update-current-level world #(level/remove-entity % (:id defender)))))
+
 (defn- apply-attack
   [world attack attacker defender]
   (let [base-result {:attacker (describe world attacker)
@@ -270,7 +276,8 @@
                                  :method (:method attack)})]
       (let [attack-result (merge attack base-result)]
         (if (:fatal? attack)
-          [world (assoc attack-result :event/type :world/killed)]
+          [(resolve-death world (:defender base-result))
+           (assoc attack-result :event/type :world/killed)]
           (let [new-hp (- (:hp/current defender) (:damage attack))
                 world (update-actor world
                                     (:entity/id defender)
@@ -404,11 +411,12 @@
                          :pos player-start-pos
                          :sight/radius 4  ;; TODO: just a random magic number, fix to be more robust later
                          :next-time 0
-                         :hp 15
-                         :max-hp 15
+                         :hp/current 15
+                         :hp/max 15
                          :armor-class 0
                          :evasion 10
-                         :to-hit 100}
+                         :to-hit 150
+                         :attacks [{:method :smash :effect :physical :dice 3 :sides 4}]}
                 :current-level-id 0
                 :levels {0 first-dungeon}
                 :next-entity-id 1
@@ -423,6 +431,6 @@
 (defn status
   "Gives some helpful info about the current world. Used for UI display info."
   [world]
-  {:current-hp (get-in world [:player :hp])
-   :max-hp     (get-in world [:player :max-hp])
+  {:current-hp (get-in world [:player :hp/current])
+   :max-hp     (get-in world [:player :hp/max])
    :level (current-level-id world)})
