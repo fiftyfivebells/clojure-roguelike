@@ -203,3 +203,72 @@
                       result (level/update-tile lvl [x y] identity)]
                   (= (level/tile-at lvl [x y])
                      (level/tile-at result [x y])))))
+
+;;; Room lighting
+
+(defn- make-room
+  [[rx ry rw rh] & {:keys [lit?] :or {lit? false}}]
+  {:bounds [rx ry rw rh] :lit? lit?})
+
+(def ^:private room-a (make-room [1 1 3 3]))   ; covers x[1,4) y[1,4)
+(def ^:private room-b (make-room [10 10 2 2])) ; covers x[10,12) y[10,12)
+
+(defn- level-with-rooms
+  [rooms]
+  (level/set-rooms (make-level 20 20) rooms))
+
+(deftest point-in-room-true-inside-bounds
+  (is (level/point-in-room? room-a [1 1]))
+  (is (level/point-in-room? room-a [3 3])))
+
+(deftest point-in-room-false-outside-bounds
+  (is (not (level/point-in-room? room-a [4 3]))) ; right edge is exclusive
+  (is (not (level/point-in-room? room-a [1 4]))) ; bottom edge is exclusive
+  (is (not (level/point-in-room? room-a [0 0]))))
+
+(deftest room-tiles-covers-full-bounds
+  (is (= (set (for [x [1 2 3] y [1 2 3]] [x y]))
+         (set (level/room-tiles room-a)))))
+
+(deftest room-glow-tiles-includes-surrounding-wall-ring
+  (is (= (set (for [x [0 1 2 3 4] y [0 1 2 3 4]] [x y]))
+         (set (level/room-glow-tiles room-a)))))
+
+(deftest room-at-finds-containing-room
+  (let [lvl (level-with-rooms [room-a room-b])]
+    (is (= room-a (level/room-at lvl [2 2])))
+    (is (= room-b (level/room-at lvl [10 10])))))
+
+(deftest room-at-nil-outside-any-room
+  (let [lvl (level-with-rooms [room-a room-b])]
+    (is (nil? (level/room-at lvl [5 5])))))
+
+(deftest light-room-at-marks-containing-room-lit
+  (let [lvl (level-with-rooms [room-a room-b])
+        lit (level/light-room-at lvl [2 2])]
+    (is (:lit? (level/room-at lit [2 2])))
+    (is (not (:lit? (level/room-at lit [10 10]))))))
+
+(deftest light-room-at-noop-outside-any-room
+  (let [lvl (level-with-rooms [room-a room-b])
+        result (level/light-room-at lvl [5 5])]
+    (is (= (level/get-rooms lvl) (level/get-rooms result)))))
+
+(deftest light-room-at-is-idempotent
+  (let [lvl (level-with-rooms [room-a room-b])
+        once (level/light-room-at lvl [2 2])
+        twice (level/light-room-at once [2 2])]
+    (is (= (level/get-rooms once) (level/get-rooms twice)))))
+
+(deftest lit-tiles-empty-when-no-room-lit
+  (let [lvl (level-with-rooms [room-a room-b])]
+    (is (empty? (level/lit-tiles lvl)))))
+
+(deftest lit-tiles-only-includes-lit-rooms
+  (let [lvl (level-with-rooms [(make-room [1 1 3 3] :lit? true) room-b])]
+    (is (= (set (level/room-glow-tiles room-a)) (level/lit-tiles lvl)))))
+
+(deftest lit-tiles-includes-bounding-walls
+  (let [lvl (level-with-rooms [(make-room [1 1 3 3] :lit? true) room-b])]
+    (is (contains? (level/lit-tiles lvl) [0 0]) "corner wall of the lit room")
+    (is (contains? (level/lit-tiles lvl) [2 0]) "top wall of the lit room")))
