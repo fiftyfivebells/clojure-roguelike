@@ -44,12 +44,19 @@
 
 (defn player-action
   [world action]
-  (let [scheduled (next-scheduled world)]
-    (when (not (and (= :actor (:kind scheduled))
-                    (world/player? world (:entity/id scheduled))))
-      (throw
-       (ex-info "player-action called for an entity that is not the player" {:scheduled scheduled :action action})))
-    (resolve-action world (world/player-id world) action)))
+  (if (world/player-dead? world)
+    ;; if the player is dead, return the world an no events (game is done)
+    [world []]
+
+    ;; otherwise, get to the player's action
+    (let [scheduled (next-scheduled world)]
+      (when (not (and (= :actor (:kind scheduled))
+                      (world/player? world (:entity/id scheduled))))
+        (throw
+         (ex-info "player-action called for an entity that is not the player"
+                  {:scheduled scheduled :action action})))
+
+      (resolve-action world (world/player-id world) action))))
 
 (defn tick-world
   [world]
@@ -66,15 +73,17 @@
   - monster: uses monster ai to decide on some action for the monster to take
   - tick: 'ticks' the world forward to the next time unit"
   [world]
-  (let [scheduled  (next-scheduled world)
-        next-world (set-world-time world (:at scheduled))]
-    (cond
-      (= (:kind scheduled) :tick) [(tick-world next-world) [] :ticked]
+  (if (world/player-dead? world)
+    [world [] :game-over]
+    (let [scheduled  (next-scheduled world)
+          next-world (set-world-time world (:at scheduled))]
+      (cond
+        (= (:kind scheduled) :tick) [(tick-world next-world) [] :ticked]
 
-      (world/player? world (:entity/id scheduled)) [next-world [] :awaiting-input]
+        (world/player? world (:entity/id scheduled)) [next-world [] :awaiting-input]
 
-      ;; else branch: decide the entity's next action and resolve it
-      :else
-      (let [[next-world action] (ai/decide next-world (:entity/id scheduled))
-            [resolved-world events] (resolve-action next-world (:entity/id scheduled) action)]
-        [resolved-world events :acted]))))
+        ;; else branch: decide the entity's next action and resolve it
+        :else
+        (let [[next-world action] (ai/decide next-world (:entity/id scheduled))
+              [resolved-world events] (resolve-action next-world (:entity/id scheduled) action)]
+          [resolved-world events :acted])))))

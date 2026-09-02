@@ -19,7 +19,7 @@
 (defn run-game
   [screen]
   (loop [[game status] (game/advance (game/new-game))]
-    (if (not= status :awaiting-input)
+    (if-not (#{:awaiting-input :game-over} status)
       (recur (game/advance game))
       (do
         (render/draw-game screen game)

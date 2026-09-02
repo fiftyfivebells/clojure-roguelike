@@ -52,7 +52,7 @@
     {:action/type :ui/return}))
 
 (defn dead-mode
-  [key-event]
+  []
   {:action/type :ui/quit})
 
 (defn key->action
@@ -61,5 +61,8 @@
   [pressed mode]
   (case (:screen mode)
     :play (play-mode pressed)
-    :dead (dead-mode pressed)
-    :prompt (prompt-mode pressed mode)))
+    :dead (dead-mode)
+    :prompt (prompt-mode pressed mode)
+
+    ;; default:
+    {:action/type :ui/none}))
