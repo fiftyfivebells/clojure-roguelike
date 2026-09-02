@@ -3,7 +3,8 @@
 (def ^:private orcs
   {:glyph   "o"
    :species {:orc/goblin   {:name "goblin"   :color :green}
-             :orc/hill-orc {:name "hill orc" :color :brown}}})
+             :orc/hill-orc {:name "hill orc" :color :brown}
+             :orc/cave-orc {:name "cave orc" :color :blue}}})
 
 (def ^:private worm-masses
   {:glyph   "w"

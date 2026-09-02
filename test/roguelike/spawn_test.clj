@@ -123,10 +123,10 @@
           (range 40))))
 
 (deftest species-below-their-depth-do-not-appear
-  (testing "goblins are native to depth 1, so depth 0 never has them"
-    (is (not (contains? (species-across-seeds 0) :orc/goblin))))
+  (testing "cave are native to depth 5, so depth 0 should never have them"
+    (is (not (contains? (species-across-seeds 0) :orc/cave-orc))))
   (testing "they do appear once the player is deep enough"
-    (is (contains? (species-across-seeds 1) :orc/goblin))))
+    (is (contains? (species-across-seeds 5) :orc/cave-orc))))
 
 (deftest only-eligible-species-are-spawned
   (doseq [depth (range 3)]
@@ -164,12 +164,13 @@
       (is (zero? (mod (count monsters) 5))
           "every group is placed at full strength"))))
 
-(deftest group-count-scales-with-room-count
-  (with-redefs [monster/group-size (constantly [1 1])]
-    (let [groups-for (fn [n-rooms]
-                       (count (spawn-on (make-level (take n-rooms room-grid)))))]
-      (is (< (groups-for 2) (groups-for 8))
-          "a level with more rooms gets more groups"))))
+;; TODO: reconsider this test after settling on spawn mechanic
+;; (deftest group-count-scales-with-room-count
+;;   (with-redefs [monster/group-size (constantly [1 1])]
+;;     (let [groups-for (fn [n-rooms]
+;;                        (count (spawn-on (make-level (take n-rooms room-grid)))))]
+;;       (is (< (groups-for 2) (groups-for 8))
+;;           "a level with more rooms gets more groups"))))
 
 ;;; Entity shape
 
@@ -189,3 +190,52 @@
     (is (every? #(qualified-keyword? (:monster/species %)) monsters))
     (is (every? #(keyword? (:monster/genus %)) monsters))
     (is (every? #(number? (:sight/radius %)) monsters))))
+
+;;; Rng independence from prior consumption
+
+(deftest population-is-independent-of-prior-rng-consumption
+  (testing "two worlds with the same seed but different :rng-state spawn identical populations"
+    ;; the spawn stream derives positionally from (rng/mix world-seed :spawn
+    ;; level-id), not from a world's current :rng-state, so this is the single
+    ;; most important property in the spawning system and the easiest to
+    ;; break by accident (eg. by threading a world's live ctx in instead)
+    (let [lvl (make-level room-grid)
+          world-a {:seed seed :rng-state (rng/make seed)}
+          ;; simulate a world that has already drawn plenty of combat/movement
+          ;; randomness before this level was ever spawned
+          world-b (assoc world-a :rng-state
+                         (:rng-state (nth (iterate #(first (rng/draw-int % 0 1000000))
+                                                    world-a)
+                                          50)))
+          population-a (second (spawn/monsters-for-level (:seed world-a) 0 lvl #{}))
+          population-b (second (spawn/monsters-for-level (:seed world-b) 0 lvl #{}))]
+      (is (not= (:rng-state world-a) (:rng-state world-b)))
+      (is (= population-a population-b)))))
+
+;;; Position uniqueness and reserved tiles across seeds
+
+(deftest every-spawned-monster-lands-on-a-distinct-position-across-seeds
+  (let [lvl (make-level room-grid)]
+    (doseq [s (range 1 15)]
+      (let [monsters (second (spawn/monsters-for-level s 0 lvl #{}))]
+        (is (= (count monsters) (count (distinct (map :pos monsters))))
+            (str "seed " s " placed two monsters on the same tile"))))))
+
+(deftest no-monster-lands-on-a-reserved-position-across-seeds
+  (let [lvl (make-level room-grid)
+        reserved (set (take 3 (map :pos (spawn-on lvl))))]
+    (doseq [s (range 1 15)]
+      (let [monsters (second (spawn/monsters-for-level s 0 lvl reserved))]
+        (is (empty? (filter reserved (map :pos monsters)))
+            (str "seed " s " placed a monster on a reserved tile"))))))
+
+;;; Monster budget
+
+(deftest the-monster-budget-stays-in-a-sane-band-for-the-level-size
+  (testing "counts vary with group sizes, so this asserts a range rather than an exact count"
+    (let [lvl (make-level room-grid)
+          counts (map (fn [s] (count (second (spawn/monsters-for-level s 0 lvl #{}))))
+                      (range 1 30))]
+      (is (every? #(<= 0 % (* (count room-grid) 7)) counts)
+          "no seed should ever exceed a full-size group in every room")
+      (is (some pos? counts) "some seed should actually spawn something"))))

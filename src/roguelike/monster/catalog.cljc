@@ -22,7 +22,17 @@
                             :hp-variance 0.1
                             :to-hit 100
                             :armor-class 8
-                            :attacks [{:method :swing :effect :physical :dice 1 :sides 10}]}}})
+                            :attacks [{:method :swing :effect :physical :dice 1 :sides 10}]}
+
+             :orc/cave-orc {:depth 5
+                            :group/size [3 5]
+                            :sight/radius 6
+                            :hp 30
+                            :hp-variance 0.1
+                            :to-hit 125
+                            :armor-class 12
+                            :attacks [{:method :swing :effect :physical :dice 2 :sides 8}
+                                      {:method :swing :effect :physical :dice 2 :sides 8}]}}})
 
 (def ^:private worm-masses
   {:monster/flags #{:breeds}
