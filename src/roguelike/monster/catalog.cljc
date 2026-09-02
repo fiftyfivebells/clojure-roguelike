@@ -11,7 +11,7 @@
                           :sight/radius 6
                           :hp 8
                           :hp-variance 0.1
-                          :to-hit 1
+                          :to-hit 100
                           :armor-class 4
                           :attacks [{:method :swing :effect :physical :dice 1 :sides 8}]}
 
@@ -20,7 +20,7 @@
                             :sight/radius 6
                             :hp 18
                             :hp-variance 0.1
-                            :to-hit 2
+                            :to-hit 100
                             :armor-class 8
                             :attacks [{:method :swing :effect :physical :dice 1 :sides 10}]}}})
 
@@ -32,7 +32,7 @@
                                :sight/radius 2
                                :hp 6
                                :hp-variance 0.1
-                               :to-hit 1
+                               :to-hit 70
                                :armor-class 1
                                :attacks [{:method :wriggle :effect :physical :dice 1 :sides 4}]}}})
 
@@ -44,7 +44,7 @@
                                :sight/radius 8
                                :hp 6
                                :hp-variance 0.2
-                               :to-hit 1
+                               :to-hit 90
                                :armor-class 1
                                :attacks [{:method :bite :effect :physical :dice 1 :sides 2}]}}})
 
