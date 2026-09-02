@@ -262,6 +262,51 @@
   (let [[rx ry rw rh] (:bounds room)]
     [(+ rx (quot rw 2)) (+ ry (quot rh 2))]))
 
+(defn point-in-room?
+  [room [x y]]
+  (let [[rx ry rw rh] (:bounds room)]
+    (and (>= x rx) (< x (+ rx rw))
+         (>= y ry) (< y (+ ry rh)))))
+
+(defn room-tiles
+  "Every [x y] floor coordinate inside room's bounds."
+  [room]
+  (let [[rx ry rw rh] (:bounds room)]
+    (for [y (range ry (+ ry rh))
+          x (range rx (+ rx rw))]
+      [x y])))
+
+(defn room-glow-tiles
+  "Every tile that should read as lit when this room is lit: its floor plus
+   the one-tile ring of walls surrounding it. Light touches and reveals a
+   wall's face without passing through it, same as the shadowcast's own
+   'walls always reveal' rule."
+  [room]
+  (let [[rx ry rw rh] (:bounds room)]
+    (for [y (range (dec ry) (+ ry rh 1))
+          x (range (dec rx) (+ rx rw 1))]
+      [x y])))
+
+(defn room-at
+  "Returns the room in level containing pos, or nil if pos isn't inside any
+   room (eg. it's in a corridor)."
+  [level pos]
+  (some #(when (point-in-room? % pos) %) (get-rooms level)))
+
+(defn light-room-at
+  "Marks the room containing pos as :lit? true. No-op if pos isn't inside any
+   room. Once a room is lit it stays lit."
+  [level pos]
+  (if-let [room (room-at level pos)]
+    (set-rooms level (mapv #(if (= % room) (assoc % :lit? true) %) (get-rooms level)))
+    level))
+
+(defn lit-tiles
+  "Union of every tile (floor and bounding walls) belonging to a currently-lit
+   room."
+  [level]
+  (into #{} (mapcat room-glow-tiles) (filter :lit? (get-rooms level))))
+
 (defn set-departed-at
   [level time]
   (assoc level :departed-at time))
