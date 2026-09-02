@@ -1,5 +1,6 @@
 (ns roguelike.world
-  (:require [roguelike.combat :as combat]
+  (:require [clojure.set :as set]
+            [roguelike.combat :as combat]
             [roguelike.knowledge :as knowledge]
             [roguelike.level :as level]
             [roguelike.rng :as rng]
@@ -164,16 +165,34 @@
   (let [actor (get-actor world actor-id)]
     (:sight/radius actor)))
 
+(defn- max-scan-radius
+  "A radius big enough that a shadowcast from any point reaches every corner
+   of the level, used to find line-of-sight into lit rooms regardless of
+   torch radius."
+  [level]
+  (let [[w h] (level/dimensions level)]
+    (long (Math/ceil (Math/sqrt (+ (* w w) (* h h)))))))
+
 (defn visible-cells
-  "Takes a world and sight-radius and returns a set of tiles visible from the "
+  "Takes a world and sight-radius and returns a set of tiles visible from the
+   actor: everything within torch radius, plus anything in line-of-sight that
+   belongs to a currently-lit room (see level/lit-tiles)."
   [world actor-id radius]
-  (let [opaque? (partial level/opaque-at? (current-level world))
-        actor-pos (:pos (get-actor world actor-id))]
-    (fov/visible-cells opaque? actor-pos radius)))
+  (let [level (current-level world)
+        opaque? (partial level/opaque-at? level)
+        actor-pos (:pos (get-actor world actor-id))
+        torch (fov/visible-cells opaque? actor-pos radius)
+        lit (level/lit-tiles level)]
+    (if (empty? lit)
+      torch
+      (set/union torch
+                 (set/intersection (fov/visible-cells opaque? actor-pos (max-scan-radius level))
+                                    lit)))))
 
 (defn observe
   [world]
-  (let [radius (sight-radius world (player-id world))
+  (let [world (update-current-level world #(level/light-room-at % (player-pos world)))
+        radius (sight-radius world (player-id world))
         visible (visible-cells world (player-id world) radius)]
     (update-current-level world #(level/remember-visible % visible))))
 
