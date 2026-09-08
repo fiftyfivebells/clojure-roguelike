@@ -35,7 +35,7 @@
                                       {:method :swing :effect :physical :dice 2 :sides 8}]}}})
 
 (def ^:private worm-masses
-  {:monster/flags #{:breeds}
+  {:monster/flags #{:multiplies}
 
    :species {:worm-mass/white {:depth 0
                                :group/size [1 1]

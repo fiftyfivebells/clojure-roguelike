@@ -420,6 +420,7 @@
     :world/ascend (if (on-stairs-up? world)
                     (ascend world)
                     [world [{:event/type :world/invalid-action :action :stairs-up}]])
+
     :world/move (attempt-movement world actor-id (:delta action))
 
     :world/wait (let [world (if (player? world actor-id) (heal-player world) world)]
@@ -465,4 +466,4 @@
   [world]
   {:current-hp (get-in world [:player :hp/current])
    :max-hp     (get-in world [:player :hp/max])
-   :level (current-level-id world)})
+   :level      (current-level-id world)})
