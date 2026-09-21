@@ -12,6 +12,7 @@
    :dark   TextColor$ANSI/BLACK
    :white  TextColor$ANSI/WHITE
    :cyan   TextColor$ANSI/CYAN
+   :purple (TextColor$RGB. 105 14 100)
    :pink   (TextColor$RGB. 255 105 180)
    :green  TextColor$ANSI/GREEN
    :brown  (TextColor$RGB. 139 69 19)})
