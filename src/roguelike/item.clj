@@ -1,4 +1,4 @@
-(ns roguelike.item.item
+(ns roguelike.item
   (:require [roguelike.item.catalog :as catalog]))
 
 (defn- resolve-category
@@ -20,6 +20,12 @@
 (defn template
   [item-kind]
   (get resolved item-kind))
+
+(defn items-at-depth
+  "Items that have started appearing by the given depth, as level ids.
+  Currently this should allow any item from the current depth and higher."
+  [depth]
+  (filter #(<= (:depth %) depth) resolved))
 
 ;; TODO: someday there might be items that are not spawnable, so there will
 ;; someday be a concept of a spawnable item vs. non-spawnable item. This
