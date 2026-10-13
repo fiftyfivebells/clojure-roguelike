@@ -453,13 +453,15 @@
                          :armor-class 0
                          :evasion 10
                          :to-hit 150
-                         :attacks [{:method :smash :effect :physical :dice 3 :sides 4}]}
+                         :attacks [{:method :smash :effect :physical :dice 3 :sides 4}]
+                         :knowledge {:item/known #{}}}
                 :current-level-id 0
                 :levels {0 first-dungeon}
                 :next-entity-id 1
                 :next-tick 10
                 :current-time 0
-                :rng-state (rng/make seed)}
+                :rng-state (rng/make seed)
+                :flavors (flavor/roll-flavors seed item/flavored-items)}
          [world first-dungeon] (populate-level world first-dungeon 0 #{player-start-pos})]
      (-> world
          (put-level 0 first-dungeon)
