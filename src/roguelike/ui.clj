@@ -1,6 +1,7 @@
 (ns roguelike.ui 
   (:require
-    [roguelike.ui.appearance.monster :as monster]))
+    [roguelike.ui.appearance.monster :as monster]
+    [roguelike.ui.appearance.item :as item]))
 
 (defn new-ui
   []
@@ -82,13 +83,18 @@
 ;; TODO: what other things might be needed?
 ;;       not sure, but it'll probably become clearer as more events get added here
 (defn apply-event
-  [ui event]
+  [ui event flavors]
   (case (:event/type event)
     :world/travelled
     (add-message ui (traveled-message (:direction event) (:depth event)))
 
     :world/invalid-action
     (add-message ui (invalid-action-message (:action event)))
+
+    :world/items-seen
+    (let [known (:known event)
+          items (:items event)]
+      (add-message ui (str "You see a " (item/display-name (first items) flavors known) ".")))
 
     :world/blocked
     (if (:player? event)
@@ -115,5 +121,5 @@
     ui))
 
 (defn apply-events
-  [ui events]
-  (reduce apply-event ui events))
+  [ui events flavors]
+  (reduce (fn [ui event] (apply-event ui event flavors)) ui events))

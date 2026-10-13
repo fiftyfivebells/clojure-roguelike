@@ -1,10 +1,13 @@
 (ns roguelike.world
   (:require [clojure.set :as set]
             [roguelike.combat :as combat]
+            [roguelike.fov :as fov]
+            [roguelike.item :as item]
+            [roguelike.item.flavor :as flavor]
+            [roguelike.item.spawn :as item-spawn]
             [roguelike.knowledge :as knowledge]
             [roguelike.level :as level]
             [roguelike.rng :as rng]
-            [roguelike.fov :as fov]
             [roguelike.spawn :as spawn]
             [roguelike.dungeon :as dungeon]))
 
@@ -86,7 +89,13 @@
    player never lands on top of a monster. The spawn rng is left on the level so
    later waves of monsters pick up where this one stopped. Returns [world lvl]."
   [world lvl lvl-id reserved]
-  (let [[ctx monsters] (spawn/monsters-for-level (:world-seed world) lvl-id lvl reserved)
+  (let [[_ pairs] (item-spawn/items-for-level (:world-seed world) lvl-id lvl reserved)
+        [world lvl] (reduce (fn [[world lvl] [pos item]]
+                              (let [[id world] (allocate-entity-id world)]
+                                [world (level/add-item lvl pos (assoc item :item/id id :item/pos pos))]))
+                            [world lvl]
+                            pairs)
+        [ctx monsters] (spawn/monsters-for-level (:world-seed world) lvl-id lvl reserved)
         [world lvl] (reduce (fn [[world lvl] monster]
                               (let [[id world] (allocate-entity-id world)]
                                 [world (level/add-entity lvl (assoc monster
@@ -123,6 +132,10 @@
   [world]
   (let [player (player-entity world)]
     (<= (:hp/current player) 0)))
+
+(defn player-knowledge
+  [world]
+  (:knowledge (player-entity world)))
 
 (defn active-actors
   "Gets a list of all active entities in the current level. Essentially just conjs the player onto the list
@@ -213,6 +226,16 @@
   [world]
   (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))]
     (filter #(contains? visible (:pos %)) (active-actors world))))
+
+(defn visible-items
+  [world]
+  (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))]
+    (filter #(contains? visible (:item/pos %)) (current-level-items world))))
+
+(defn known-item?
+  [world item-kind]
+  (let [player (player-entity world)]
+    (item-kind (get-in [:item/known :knowledge] player))))
 
 (defn tile-classifier
   ([world]
@@ -333,15 +356,36 @@
             [world resolved] (combat/resolve-attacks world atk-profile def-profile) ]
         (apply-attacks world resolved attacker defender)))))
 
+(defn- observed-items
+  [world items]
+  (let [known (->> items
+                   (filter #(known-item? world %))
+                   (map :item/kind))]
+    {:event/type :world/items-seen
+     :items items
+     :known (set known)}))
+
 (defn attempt-movement
   [world actor-id delta]
   (let [new-pos (get-proposed-coords world actor-id delta)
         destination (classify-destination world new-pos)
         player? (player? world actor-id)]
     (cond
+      ;; TODO: here, I think I need to add some kind of a flag to show whether
+      ;; player is on items or not. If the player is moving onto items, then we
+      ;; need to display a message (ie. "You see a <whatever> here."). Probably
+      ;; something like :items? on the event so the ui knows whether to add a
+      ;; message or proceed as normal
       (= destination :passable)
-      [(move-actor world actor-id new-pos) [{:event/type :world/moved :player? player?}]]
-
+      (let [new-world (move-actor world actor-id new-pos)
+            move-event {:event/type
+                        :world/moved
+                        :player? player?}
+            items (level/items-at (current-level world) new-pos)]
+        (if (and player? items)
+          [new-world [move-event (observed-items world items)]]
+          [new-world move-event]))
+      
       (= destination :actor)
       (attempt-attack world actor-id new-pos)
 

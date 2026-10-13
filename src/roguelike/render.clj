@@ -1,6 +1,7 @@
 (ns roguelike.render
   (:require [roguelike.world :as world]
-            [roguelike.ui.appearance :as appearance])
+            [roguelike.ui.appearance :as appearance]
+            [roguelike.ui.appearance.item :as item])
   (:import [com.googlecode.lanterna TextColor$ANSI TextColor$RGB]))
 
 ;; TODO: will probably need to untangle this at some point. I've got two things
@@ -81,6 +82,16 @@
         (.setForegroundColor tg (style->color style))
         (.putString tg (+ sx start-col) (+ start-row sy) (str glyph))))))
 
+(defn draw-items
+  [tg world origin [vw vh] start-row start-col]
+  (doseq [item (world/visible-items world)]
+    (let [[sx sy] (mapv world->screen (:item/pos item) origin)]
+      (when (and (< -1 sx vw) (< -1 sy vh))
+        (let [glyph (item/glyph-of (:item/kind item))
+              color (item/color-of item #{})]  ;; TODO: don't pass an empty flavors
+          (.setForegroundColor tg (style->color color))
+          (.putString tg (+ sx start-col) (+ start-row sy) (str glyph)))))))
+
 (defn draw-actors
   [tg world origin [vw vh] start-row start-col]
   (doseq [entity (world/visible-actors world)]
@@ -119,6 +130,7 @@
         origin (camera-origin (world/player-pos world) (:viewport layout) level-size)]
     (.clear screen)
     (draw-level tg world origin (:viewport layout) (:play-start-row layout) (:play-start-col layout))
+    (draw-items tg world origin (:viewport layout) (:play-start-row layout) (:play-start-col layout))
     (draw-actors tg world origin (:viewport layout) (:play-start-row layout) (:play-start-col layout))
     (draw-message tg ui 12 (:msg-row layout))
     (draw-sidebar tg world layout)
