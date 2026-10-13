@@ -76,7 +76,7 @@
 
 (defn monsters-for-level
   [world-seed level-id lvl reserved]
-  (let [ctx {:rng-state (rng/make (rng/mix world-seed :spawn level-id))}
+  (let [ctx {:rng-state (rng/mix-and-make world-seed :spawn level-id)}
         eligible (monster/species-at-depth level-id)]
     (if (empty? eligible)
       [ctx []]

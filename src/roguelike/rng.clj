@@ -86,6 +86,13 @@
         folded (bit-xor folded (mul32 level-id C_level))]
     (fmix32 folded)))
 
+(defn mix-and-make
+  "The pattern of mixing a seed, key, and level id and then passing the result
+  into the make function is common. This helper just composes those two into
+  one simple call."
+  [world-seed stream-key level-id]
+  (make (mix world-seed stream-key level-id)))
+
 (defn- rand-double
   "Takes an RNG state and returns a random double between 0.0 (inclusive) and 1.0
  (exclusive)."
