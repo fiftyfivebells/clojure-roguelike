@@ -167,6 +167,24 @@
                   (update-entity level (:entity/id entity) #(update % :next-time + delta)))]
     (reduce updater level (entities-of level))))
 
+;; Items
+
+(defn items-at
+  "Get items in the level at the provided position. This is plural because there
+  can be 0..n items on a given coordinate."
+  [level pos]
+  (get-in level [:items pos]))
+
+(defn add-item
+  "Adds an item to the item stack at the given coordinate in the level."
+  [level pos item]
+  (update-in level [:items pos] #(into [item] %)))
+
+(defn all-items
+  "Returns a seq of every item on the given level."
+  [level]
+  (mapcat val (:items level)))
+
 ;; Knowledge/FOV
 
 (defn remember-visible

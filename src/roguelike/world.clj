@@ -51,6 +51,10 @@
   [world]
   (level/dimensions (current-level world)))
 
+(defn current-level-items
+  [world]
+  (level/all-items (current-level world)))
+
 ;; Time
 
 (defn- current-time
