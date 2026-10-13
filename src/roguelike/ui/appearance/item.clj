@@ -1,7 +1,6 @@
 (ns roguelike.ui.appearance.item 
   (:require
-    [clojure.string :as str]
-    [roguelike.ui.appearance :as appearance]))
+    [clojure.string :as str]))
 
 (def ^:private edged
   {:glyph "|"
@@ -46,6 +45,7 @@
 (def ^:private scroll
   {:glyph "?"
    :noun  "scroll"
+   :color :white
    :unidentified-format "scroll titled %s"
    :identified-format "Scroll of %s"
    :kinds scroll-kinds})
@@ -62,7 +62,16 @@
     (into {} (map (fn [[k v]] [k (merge defaults v)])) (:kinds node))))
 
 (def ^:private kind->appearance
-  "Complete catalog of all items."
+  "Complete catalog of all items. Flattened/normalized so each entry looks
+  something like this:
+
+  {:glyph \"!\",
+  :noun \"potion\",
+  :unidentified-format \"%s potion\",
+  :identified-format \"Potion of %s\",
+  :category :potion,
+  :name \"Lesser Healing\"}"
+
   (let [edgeds   (flatten-category [:edged edged])
         hafteds  (flatten-category [:hafted hafted])
         polearms (flatten-category [:polearm polearm])
@@ -74,31 +83,6 @@
            potions
            scrolls)))
 
-(def ^:private category->flavor-spec
-  {:potion {:flavor-dimensions [{:key :adjective :render :pool}
-                                {:key :color     :render :pool}]
-            :flavor-pools {:adjective potion-adjectives
-                           :color     potion-colors}}
-
-   :scroll {:flavor-dimensions [{:key :title :render :syllables}]}})
-
-(defn- render-syllables
-  [scroll]
-  "")
-
-(defn- dimension-word
-  [dimension pool flavor]
-  (let [dim-key (:key dimension)
-        render (:render dimension)]
-    (case render
-      :pool (let [word (get-in pool [dim-key (dim-key flavor) :word])]
-              (when (nil? word)
-                (throw (ex-info "pool does not contain a word for this flavor"
-                                {:dim-key dim-key :flavor flavor})))
-              word)
-
-      :syllables (render-syllables (dim-key flavor)))))
-
 (defn- format-unidentified
   [appearance words]
   (format (:unidentified-format appearance) (str/join " " words)))
@@ -109,14 +93,52 @@
     (format id-format name)
     name))
 
+(defn- potion-words
+  [{:keys [adjective color]}]
+  (map #(:word %) [(adjective potion-adjectives)
+                   (color potion-colors)]))
+
+(defn- scroll-words
+  "Takes in a vector of vectors, where each of the nested vectors is a list of
+  syllables. Maps over the syllable lists and creates a phrase of words to use
+  as the name of the scroll. Makes sure to capitalize the words returned so it
+  render as all caps.
+
+  Example:
+  [[:ka :zor] [:mul :gan :el]] comes in, 'KAZOR MULGANEL' is returned." 
+  [{:keys [title]}]
+  (let [render-syllables #(apply str (map name %))
+        render-and-upper (comp str/upper-case render-syllables)]
+    (map render-and-upper title)))
+
 (defn- build-unidentified-name
   [appearance flavor]
-  (let [category   (:category appearance)
-        flavor-spec (category category->flavor-spec)
-        dimensions (:flavor-dimensions flavor-spec)
-        pool       (:flavor-pools flavor-spec)
-        desc (map #(dimension-word % pool flavor) dimensions)]
-    (format-unidentified appearance desc)))
+  (let [category (:category appearance)
+        words (case category
+                :potion (potion-words flavor)
+                :scroll (scroll-words flavor)
+                (throw
+                 (ex-info "unknown item category" {:category category
+                                                   :flavor   flavor})))]
+    (format-unidentified appearance words)))
+
+;; flavors is a map of item/kind to it's "flavor". The flavor will be different
+;; depending on the type of item. An example of the flavors map:
+;;
+;; {:potion/lesser-healing {:adjective :bubbling
+;;                          :color     :azure}
+;;  :potion/harm           {:adjective :glowing
+;;                          :color     :crimson}
+;;  :scroll/phase-door     {:title [[:ka :zor] [:en :mul]]}}
+
+;; appearance
+;;
+;; {:glyph "!",
+;;   :noun "potion",
+;;   :unidentified-format "%s potion",
+;;   :identified-format "Potion of %s",
+;;   :category :potion,
+;;   :name "Lesser Healing"}
 
 (defn display-name
   "Builds the display name for the item. For weapons, displays the :name field,
@@ -131,7 +153,7 @@
       (throw (ex-info "given item kind has no appearance"
                       {:item/kind item-kind})))
     (let [flavor (item-kind flavors)]
-      (if (or (known item-kind)
+      (if (or (contains? known item-kind)
               (nil? flavor))
         (format-identified appearance (:name appearance))
         (build-unidentified-name appearance flavor)))))
@@ -140,12 +162,21 @@
   [item flavors]
   (let [item-kind (:item/kind item)
         appearance (item-kind kind->appearance)
-        flavor (flavors item-kind)
-        category (:category appearance)]
-    (or (when-let [c (:color flavor)]
-          (get-in category->flavor-spec [category :flavor-pools :color c :color]))
+        flavor (flavors item-kind)]
+    (or (some-> (:color flavor)
+                potion-colors
+                :color)
         (:color appearance))))
 
 (defn glyph-of
   [item-kind]
   (:glyph (item-kind kind->appearance)))
+
+(defn cycler
+  [n]
+  (loop [n n
+         nums (cycle [1 2 3])
+         r []]
+    (if (zero? n)
+      r
+      (recur (dec n) (rest nums) (conj r (first nums))))))
