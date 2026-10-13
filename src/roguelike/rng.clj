@@ -75,7 +75,8 @@
 (def ^:private stream-code
   {:layout 1
    :spawn  2
-   :items  3})
+   :items  3
+   :flavors 4})
 
 (defn mix
   "Makes use of fmix32 to take a world-seed, stream key (like :layout or :spawn)
@@ -213,3 +214,18 @@
                (into (subvec remaining 0 i) (subvec remaining (inc i)))
                holder
                (conj acc (nth remaining i)))))))
+
+(defn draw-weighted
+  "Returns [holder elem], drawn from coll with a probability proportional to
+  (weight-fn elem). Throws if the weight is <= 0."
+  [holder coll weigh-fn]
+  (let [weights (mapv weigh-fn coll)
+        total   (reduce + weights)]
+    (when-not (pos? total)
+      (throw (ex-info "no positive weight to draw from" {:total total})))
+    (let [[holder roll] (draw-int holder 0 total)]
+      [holder (loop [i 0
+                     roll roll]
+                (if (< roll (weights i))
+                  (nth coll i)
+                  (recur (inc i) (- roll (weights i)))))])))
