@@ -5,25 +5,36 @@
 
 (defn new-ui
   []
-  {:mode {:screen :play}
+  {:modes []
    :current-msg "Welcome to the dungeon."
    :messages []})
+
+(defn current-mode
+  [ui]
+  (peek (:modes ui)))
+
+(defn push-mode
+  [ui frame]
+  (update ui :modes conj frame))
+
+(defn pop-mode
+  [ui]
+  (update ui :modes pop))
 
 (defn update-mode
   [ui action]
   (case (:action/type action)
     :ui/prompt
-    (let [{:keys [message on-yes return]} action]
-      (assoc ui :mode {:screen :prompt
-                       :message message
-                       :on-yes on-yes
-                       :return return}))
+    (let [{:keys [message on-yes]} action]
+      (push-mode ui {:screen :prompt
+                     :message message
+                     :on-yes on-yes}))
 
     :ui/return
-    (assoc ui :mode (:return (:mode ui)))
+    (pop-mode ui)
 
     :ui/quit
-    (assoc ui :mode {:screen :quit})
+    (push-mode ui {:screen :quit})
 
     ;; default no-ops: just return the ui unchanged
     ui))
@@ -111,7 +122,7 @@
     (if (get-in event [:defender :player?])
       (-> ui
           (add-message "You have died. Press any key to continue.")
-          (assoc :mode {:screen :dead}))
+          (push-mode {:screen :dead}))
       (add-message ui (str "The " (monster/name-of (:species (:defender event))) " dies.")))
 
     :world/wait

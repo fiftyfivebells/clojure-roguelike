@@ -8,6 +8,10 @@
   {:world (world/new-world)
    :ui    (ui/new-ui)})
 
+(defn current-mode
+  [game]
+  (ui/current-mode (:ui game)))
+
 (defn advance
   [game]
   (let [[new-world events status] (scheduler/advance (:world game))

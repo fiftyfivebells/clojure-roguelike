@@ -1,7 +1,8 @@
 (ns roguelike.render
   (:require [roguelike.world :as world]
             [roguelike.ui.appearance :as appearance]
-            [roguelike.ui.appearance.item :as item])
+            [roguelike.ui.appearance.item :as item]
+            [roguelike.ui :as ui])
   (:import [com.googlecode.lanterna TextColor$ANSI TextColor$RGB]))
 
 ;; TODO: will probably need to untangle this at some point. I've got two things
@@ -65,7 +66,7 @@
 (defn draw-message
   [tg ui start-col msg-row]
   (.setForegroundColor tg (style->color :bright))
-  (let [mode (:mode ui)]
+  (let [mode (ui/current-mode ui)]
     (case (:screen mode)
       :prompt (.putString tg start-col 0 (:message mode))
       (when-let [msg (:current-msg ui)]

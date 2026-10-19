@@ -361,6 +361,7 @@
   (let [known (->> items
                    (filter #(known-item? world %))
                    (map :item/kind))]
+
     {:event/type :world/items-seen
      :items items
      :known (set known)}))

@@ -25,9 +25,9 @@
         (render/draw-game screen game)
         (let [key-event    (input/read-key screen)
               _            (input/drain-input! screen)
-              action       (input/key->action key-event (:mode (:ui game)))
+              action       (input/key->action key-event (game/current-mode game))
               updated-game (game/player-action game action)]
-          (when (not= (get-in updated-game [:ui :mode :screen]) :quit)
+          (when (not= (:screen (game/current-mode updated-game)) :quit)
             (recur (game/advance updated-game))))))))
 
 (defn -main [& args]

@@ -1,4 +1,6 @@
-(ns roguelike.input)
+(ns roguelike.input
+  (:require
+    [roguelike.ui :as ui]))
 
 (defn drain-input!
   "Repeatedly polls for input until the queue is empty. This is intended to stop
@@ -25,8 +27,9 @@
     (and (:ctrl? key-event) (= (:key key-event) \x))
     {:action/type :ui/prompt
      :message "Really quit? (y to confirm, any other key to cancel)"
-     :on-yes {:action/type :ui/quit}
-     :return {:screen :play}}
+     :on-yes {:action/type :ui/quit}}
+
+    (= (:key key-event) \i) {}
 
     (= (:key key-event) \h) {:action/type :world/move :delta [-1 0]}
     (= (:key key-event) \y) {:action/type :world/move :delta [-1 -1]}
@@ -36,6 +39,9 @@
     (= (:key key-event) \l) {:action/type :world/move :delta [1 0]}
     (= (:key key-event) \j) {:action/type :world/move :delta [0 1]}
     (= (:key key-event) \k) {:action/type :world/move :delta [0 -1]}
+
+    (= (:key key-event) \g) {:action/type :world/get}
+
     (= (:key key-event) \.) {:action/type :world/wait}
     (= (:key key-event) \>) {:action/type :world/descend}
     (= (:key key-event) \<) {:action/type :world/ascend}
@@ -60,9 +66,9 @@
    delegates to the appropriate  handler for the screen type."
   [pressed mode]
   (case (:screen mode)
-    :play (play-mode pressed)
     :dead (dead-mode)
     :prompt (prompt-mode pressed mode)
 
     ;; default:
-    {:action/type :ui/none}))
+    ;; TODO: maybe refactor this so play isn't the default
+    (play-mode pressed)))
