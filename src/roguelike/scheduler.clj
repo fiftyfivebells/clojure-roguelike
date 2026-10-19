@@ -9,6 +9,8 @@
     :world/ascend 10
     :world/move 10
     :world/wait 10
+    :world/get 10
+    :world/inventory 0
     (throw (ex-info "this action doesn't exist" {:action action}))))
 
 (defn- reschedule

@@ -165,6 +165,13 @@
       player
       (level/entity-at (current-level world) [x y]))))
 
+(defn update-player-inventory
+  [world items]
+  (update-actor world
+                (player-id world)
+                (fn [p]
+                  (update p :inventory into items))))
+
 ;; Tiles
 
 (defn tile-at
@@ -459,6 +466,17 @@
                 (fn [player]
                   (update player :hp/current #(min (:hp/max player) (inc %))))))
 
+(defn- attempt-pickup
+  [world actor-id]
+  (let [current-pos (:pos (get-actor world actor-id))
+        items (level/items-at (current-level world) current-pos)]
+    (if (seq items)
+      (let [new-world (-> world
+                          (update-player-inventory items)
+                          (update-current-level #(level/remove-items % current-pos)))]
+        [new-world {:event/type :world/pickup :items items}])
+      [world [{:event/type :world/pickup-failed :reason :no-item}]])))
+
 (defn update-world
   [world actor-id action]
   (case (:action/type action)
@@ -474,6 +492,10 @@
 
     :world/wait (let [world (if (player? world actor-id) (heal-player world) world)]
                   [world [{:event/type :world/wait}]])
+
+    :world/get (attempt-pickup world actor-id)
+
+    :world/inventory [world []]
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))
@@ -499,6 +521,7 @@
                          :evasion 10
                          :to-hit 150
                          :attacks [{:method :smash :effect :physical :dice 3 :sides 4}]
+                         :inventory []
                          :knowledge {:item/known #{}}}
                 :current-level-id 0
                 :levels {0 first-dungeon}

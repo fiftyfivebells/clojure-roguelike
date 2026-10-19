@@ -29,8 +29,11 @@
      :message "Really quit? (y to confirm, any other key to cancel)"
      :on-yes {:action/type :ui/quit}}
 
-    (= (:key key-event) \i) {}
+    ;; actions (get, quaff, etc.)
+    (= (:key key-event) \i) {:action/type :world/inventory}
+    (= (:key key-event) \g) {:action/type :world/get}
 
+    ;; movement
     (= (:key key-event) \h) {:action/type :world/move :delta [-1 0]}
     (= (:key key-event) \y) {:action/type :world/move :delta [-1 -1]}
     (= (:key key-event) \b) {:action/type :world/move :delta [-1 1]}
@@ -40,8 +43,7 @@
     (= (:key key-event) \j) {:action/type :world/move :delta [0 1]}
     (= (:key key-event) \k) {:action/type :world/move :delta [0 -1]}
 
-    (= (:key key-event) \g) {:action/type :world/get}
-
+    ;; travel/wait/etc
     (= (:key key-event) \.) {:action/type :world/wait}
     (= (:key key-event) \>) {:action/type :world/descend}
     (= (:key key-event) \<) {:action/type :world/ascend}
