@@ -180,6 +180,21 @@
   [level pos item]
   (update-in level [:items pos] #(into [item] %)))
 
+(defn- assert-items-exist!
+  [level pos]
+  (when (empty? (items-at level pos))
+    (throw (ex-info "no items exist at the provided position"
+                    {:pos pos}))))
+
+;; TODO: I should add a targeted function to remove a specific item by id,
+;; allowing players to choose which item they pick up rather than just making
+;; them pick up everything in the spot they're standing on
+(defn remove-items
+  "Removes every item at the given position from the level."
+  [level pos]
+  (assert-items-exist! level pos)
+  (update level :items dissoc pos))
+
 (defn all-items
   "Returns a seq of every item on the given level."
   [level]
