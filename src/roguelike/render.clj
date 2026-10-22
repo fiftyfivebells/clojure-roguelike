@@ -14,6 +14,8 @@
    :dark   TextColor$ANSI/BLACK
    :white  TextColor$ANSI/WHITE
    :cyan   TextColor$ANSI/CYAN
+   :blue   TextColor$ANSI/BLUE
+   :red    TextColor$ANSI/RED
    :purple (TextColor$RGB. 105 14 100)
    :pink   (TextColor$RGB. 255 105 180)
    :green  TextColor$ANSI/GREEN
@@ -89,7 +91,7 @@
     (let [[sx sy] (mapv world->screen (:item/pos item) origin)]
       (when (and (< -1 sx vw) (< -1 sy vh))
         (let [glyph (item/glyph-of (:item/kind item))
-              color (item/color-of item #{})]  ;; TODO: don't pass an empty flavors
+              color (item/color-of item (world/flavors world))]
           (.setForegroundColor tg (style->color color))
           (.putString tg (+ sx start-col) (+ start-row sy) (str glyph)))))))
 

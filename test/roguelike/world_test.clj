@@ -145,3 +145,25 @@
           w (make-world :level (make-lit-room-level monster))
           lit-level (update w :levels update 0 #(level/light-room-at % room-near-corner))]
       (is (contains? (world/visible-cells lit-level 1 2) room-far-corner)))))
+
+;;; Items
+
+(def ^:private potion {:item/kind :potion/lesser-healing :item/id 7})
+
+(deftest known-item-checks-the-players-known-kinds
+  (let [w (make-world :player (make-player {:knowledge {:item/known #{:potion/lesser-healing}}}))]
+    (is (world/known-item? w :potion/lesser-healing))
+    (is (not (world/known-item? w :potion/harm)))))
+
+(deftest stepping-onto-a-known-item-reports-it-as-known
+  (let [player (make-player {:pos [2 2] :knowledge {:item/known #{:potion/lesser-healing}}})
+        lvl (level/add-item (make-lit-room-level) [3 2] (assoc potion :item/pos [3 2]))
+        [_ events] (world/attempt-movement (make-world :player player :level lvl) 0 [1 0])
+        seen (some #(when (= :world/items-seen (:event/type %)) %) events)]
+    (is (= #{:potion/lesser-healing} (:known seen)))))
+
+(deftest pickup-returns-a-vector-of-events
+  (let [lvl (level/add-item (make-lit-room-level) [1 1] (assoc potion :item/pos [1 1]))
+        [_ events] (world/update-world (make-world :player (make-player {:inventory []}) :level lvl)
+                                       0 {:action/type :world/get})]
+    (is (= [:world/pickup] (map :event/type events)))))

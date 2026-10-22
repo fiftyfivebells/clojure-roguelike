@@ -239,10 +239,15 @@
   (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))]
     (filter #(contains? visible (:item/pos %)) (current-level-items world))))
 
+(defn flavors
+  "Returns the flavors rolled for this world (e.g., which potion is 'bubbling')."
+  [world]
+  (:flavors world))
+
 (defn known-item?
   [world item-kind]
   (let [player (player-entity world)]
-    (item-kind (get-in [:item/known :knowledge] player))))
+    (contains? (get-in player [:knowledge :item/known]) item-kind)))
 
 (defn tile-classifier
   ([world]
@@ -366,8 +371,8 @@
 (defn- observed-items
   [world items]
   (let [known (->> items
-                   (filter #(known-item? world %))
-                   (map :item/kind))]
+                   (map :item/kind)
+                   (filter #(known-item? world %)))]
 
     {:event/type :world/items-seen
      :items items
@@ -392,7 +397,7 @@
             items (level/items-at (current-level world) new-pos)]
         (if (and player? items)
           [new-world [move-event (observed-items world items)]]
-          [new-world move-event]))
+          [new-world [move-event]]))
       
       (= destination :actor)
       (attempt-attack world actor-id new-pos)
@@ -474,7 +479,7 @@
       (let [new-world (-> world
                           (update-player-inventory items)
                           (update-current-level #(level/remove-items % current-pos)))]
-        [new-world {:event/type :world/pickup :items items}])
+        [new-world [{:event/type :world/pickup :items items}]])
       [world [{:event/type :world/pickup-failed :reason :no-item}]])))
 
 (defn update-world
