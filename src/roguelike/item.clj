@@ -59,4 +59,5 @@
   The caller owns the :item/id property."
   [item-kind]
   (-> (apply dissoc (template item-kind) spawn-only)
-      (assoc :entity/type :item)))
+      (assoc :entity/type :item
+             :item/quantity 1)))

@@ -2,6 +2,7 @@
   (:require [clojure.set :as set]
             [roguelike.combat :as combat]
             [roguelike.fov :as fov]
+            [roguelike.inventory :as inventory]
             [roguelike.item :as item]
             [roguelike.item.flavor :as flavor]
             [roguelike.item.spawn :as item-spawn]
@@ -170,7 +171,7 @@
   (update-actor world
                 (player-id world)
                 (fn [p]
-                  (update p :inventory into items))))
+                  (update p :inventory inventory/add-items items))))
 
 ;; Tiles
 

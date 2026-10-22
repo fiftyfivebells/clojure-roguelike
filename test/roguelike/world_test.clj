@@ -167,3 +167,16 @@
         [_ events] (world/update-world (make-world :player (make-player {:inventory []}) :level lvl)
                                        0 {:action/type :world/get})]
     (is (= [:world/pickup] (map :event/type events)))))
+
+(deftest picking-up-the-same-kind-twice-makes-one-stack
+  (let [stackable (assoc potion :item/stackable? true :item/quantity 1)
+        lvl (-> (make-lit-room-level)
+                (level/add-item [1 1] (assoc stackable :item/pos [1 1]))
+                (level/add-item [2 1] (assoc stackable :item/id 8 :item/pos [2 1])))
+        w (make-world :player (make-player {:inventory []}) :level lvl)
+        [w _] (world/update-world w 0 {:action/type :world/get})
+        w (world/move-actor w 0 [2 1])
+        [w _] (world/update-world w 0 {:action/type :world/get})
+        inv (:inventory (world/player-entity w))]
+    (is (= 1 (count inv)))
+    (is (= 2 (:item/quantity (first inv))))))
