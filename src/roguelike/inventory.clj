@@ -19,3 +19,32 @@
 (defn add-items
   [inventory items]
   (reduce add-item inventory items))
+
+;; Order categories appear in the pack. Mirrors Angband's descending tval order
+;; (list-tvals.h): potion, scroll, sword, polearm, hafted.
+(def ^:private category-order
+  [:potion :scroll :edged :polearm :hafted])
+
+(def ^:private category-rank
+  (zipmap category-order (range)))
+
+(defn- sort-key
+  "Mirrors Angband's earlier_object: category first, then unidentified
+  flavored items last, then kind. An item is unidentified when its kind has a
+  flavor and the player doesn't know it yet."
+  [flavors known item]
+  (let [{:item/keys [category kind]} item
+        rank (category-rank category)
+        unaware? (and (contains? flavors kind)
+                      (not (contains? known kind)))]
+    (when (nil? rank)
+      (throw (ex-info "item category has no pack order" {:item/category category})))
+    [rank (if unaware? 1 0) (name kind)]))
+
+(defn pack
+  "Returns the inventory in display order, each item paired with its letter:
+  [{:label \\a :item {...}} ...]. Letters are positions in this sorted list, so
+  they shift as items come and go. Never store them."
+  [inventory flavors known]
+  (map-indexed (fn [i item] {:label (char (+ (int \a) i)) :item item})
+               (sort-by #(sort-key flavors known %) inventory)))
