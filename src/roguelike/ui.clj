@@ -105,7 +105,7 @@
     :world/items-seen
     (let [known (:known event)
           items (:items event)]
-      (add-message ui (str "You see a " (item/display-name (first items) flavors known) ".")))
+      (add-message ui (str "You see " (item/describe (first items) flavors known) ".")))
 
     :world/blocked
     (if (:player? event)

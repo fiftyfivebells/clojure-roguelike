@@ -35,8 +35,8 @@
 (def ^:private potion
   {:glyph      "!"
    :noun       "potion"
-   :unidentified-format "%s potion"
-   :identified-format "Potion of %s"
+   :unidentified-format {:one "%s potion"    :many "%s potions"}
+   :identified-format   {:one "Potion of %s" :many "Potions of %s"}
    :kinds      potion-kinds})
 
 (def ^:private scroll-kinds
@@ -46,8 +46,8 @@
   {:glyph "?"
    :noun  "scroll"
    :color :white
-   :unidentified-format "scroll titled %s"
-   :identified-format "Scroll of %s"
+   :unidentified-format {:one "scroll titled %s" :many "scrolls titled %s"}
+   :identified-format   {:one "Scroll of %s"     :many "Scrolls of %s"}
    :kinds scroll-kinds})
 
 (def ^:private inheritable
@@ -67,8 +67,8 @@
 
   {:glyph \"!\",
   :noun \"potion\",
-  :unidentified-format \"%s potion\",
-  :identified-format \"Potion of %s\",
+  :unidentified-format {:one \"%s potion\" :many \"%s potions\"},
+  :identified-format {:one \"Potion of %s\" :many \"Potions of %s\"},
   :category :potion,
   :name \"Lesser Healing\"}"
 
@@ -83,14 +83,18 @@
            potions
            scrolls)))
 
+;; names come in two forms, picked by keyword: :one for a single item, :many for
+;; a stack. Formats are maps like {:one "%s potion" :many "%s potions"}. Weapons
+;; don't stack, so their :name is a plain string with no plural.
+
 (defn- format-unidentified
-  [appearance words]
-  (format (:unidentified-format appearance) (str/join " " words)))
+  [appearance form words]
+  (format (form (:unidentified-format appearance)) (str/join " " words)))
 
 (defn- format-identified
-  [appearance name]
+  [appearance form name]
   (if-let [id-format (:identified-format appearance)]
-    (format id-format name)
+    (format (form id-format) name)
     name))
 
 (defn- potion-words
@@ -112,7 +116,7 @@
     (map render-and-upper title)))
 
 (defn- build-unidentified-name
-  [appearance flavor]
+  [appearance form flavor]
   (let [category (:category appearance)
         words (case category
                 :potion (potion-words flavor)
@@ -120,7 +124,7 @@
                 (throw
                  (ex-info "unknown item category" {:category category
                                                    :flavor   flavor})))]
-    (format-unidentified appearance words)))
+    (format-unidentified appearance form words)))
 
 ;; flavors is a map of item/kind to it's "flavor". The flavor will be different
 ;; depending on the type of item. An example of the flavors map:
@@ -135,18 +139,14 @@
 ;;
 ;; {:glyph "!",
 ;;   :noun "potion",
-;;   :unidentified-format "%s potion",
-;;   :identified-format "Potion of %s",
+;;   :unidentified-format {:one "%s potion" :many "%s potions"},
+;;   :identified-format {:one "Potion of %s" :many "Potions of %s"},
 ;;   :category :potion,
 ;;   :name "Lesser Healing"}
 
-(defn display-name
-  "Builds the display name for the item. For weapons, displays the :name field,
-  but there is logic for potions and scrolls. Takes the flavors combos that the
-  world rolled along with what the player knows. If the player already knows the
-  item or there is no flavor for the item, just display the true name. Otherwise
-  we show the 'unidentified' name."
-  [item flavors known]
+(defn- item-name
+  "The item's name in the given form (:one or :many)."
+  [item flavors known form]
   (let [item-kind (:item/kind item)
         appearance (item-kind kind->appearance)]
     (when (nil? appearance)
@@ -155,8 +155,29 @@
     (let [flavor (item-kind flavors)]
       (if (or (contains? known item-kind)
               (nil? flavor))
-        (format-identified appearance (:name appearance))
-        (build-unidentified-name appearance flavor)))))
+        (format-identified appearance form (:name appearance))
+        (build-unidentified-name appearance form flavor)))))
+
+(defn display-name
+  "Builds the singular display name for the item. For weapons, displays the
+  :name field, but there is logic for potions and scrolls. Takes the flavors
+  combos that the world rolled along with what the player knows. If the player
+  already knows the item or there is no flavor for the item, just display the
+  true name. Otherwise we show the 'unidentified' name."
+  [item flavors known]
+  (item-name item flavors known :one))
+
+(defn describe
+  "The item's name with its count, like Angband's item lists: 'a dagger',
+  'an azure potion', '3 Potions of Harm'."
+  [item flavors known]
+  (let [n (:item/quantity item)]
+    (if (> n 1)
+      (str n " " (item-name item flavors known :many))
+      (let [single (item-name item flavors known :one)]
+        (if (#{\a \e \i \o \u} (Character/toLowerCase (first single)))
+          (str "an " single)
+          (str "a " single))))))
 
 (defn color-of
   [item flavors]
