@@ -166,6 +166,10 @@
       player
       (level/entity-at (current-level world) [x y]))))
 
+(defn player-inventory
+  [world]
+  (:inventory (player-entity world)))
+
 (defn update-player-inventory
   [world items]
   (update-actor world
@@ -244,6 +248,16 @@
   "Returns the flavors rolled for this world (e.g., which potion is 'bubbling')."
   [world]
   (:flavors world))
+
+(defn known-items
+  "The set of item kinds the player has identified."
+  [world]
+  (get-in (player-entity world) [:knowledge :item/known]))
+
+(defn player-pack
+  "The player's inventory in display order, with letters (see inventory/pack)."
+  [world]
+  (inventory/pack (player-inventory world) (flavors world) (known-items world)))
 
 (defn known-item?
   [world item-kind]
@@ -500,8 +514,6 @@
                   [world [{:event/type :world/wait}]])
 
     :world/get (attempt-pickup world actor-id)
-
-    :world/inventory [world []]
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))
