@@ -1,6 +1,7 @@
 (ns roguelike.input
   (:require
-    [roguelike.ui :as ui]))
+    [roguelike.ui :as ui])
+  (:import [com.googlecode.lanterna.input KeyType]))
 
 (defn drain-input!
   "Repeatedly polls for input until the queue is empty. This is intended to stop
@@ -30,7 +31,11 @@
      :on-yes {:action/type :ui/quit}}
 
     ;; actions (get, quaff, etc.)
-    (= (:key key-event) \i) {:action/type :world/inventory}
+    (= (:key key-event) \i) {:action/type :ui/item-select
+                              :prompt "Select Item:"
+                              :filter {}
+                              :empty "You have nothing in your inventory."}
+
     (= (:key key-event) \g) {:action/type :world/get}
 
     ;; movement
@@ -59,6 +64,15 @@
     (:on-yes mode)
     {:action/type :ui/return}))
 
+(defn item-select-mode
+  "Item picker input handler. ESC backs out, and any character is sent as a
+  pick; the game decides whether that letter means anything."
+  [key-event]
+  (condp = (:key-type key-event)
+    KeyType/Escape    {:action/type :ui/return}
+    KeyType/Character {:action/type :ui/select :label (:key key-event)}
+    {:action/type :ui/none}))
+
 (defn dead-mode
   []
   {:action/type :ui/quit})
@@ -70,6 +84,7 @@
   (case (:screen mode)
     :dead (dead-mode)
     :prompt (prompt-mode pressed mode)
+    :item-select (item-select-mode pressed)
 
     ;; default:
     ;; TODO: maybe refactor this so play isn't the default
