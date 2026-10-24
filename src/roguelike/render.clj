@@ -1,5 +1,6 @@
 (ns roguelike.render
   (:require [roguelike.world :as world]
+            [roguelike.ui.item-select :as item-select]
             [roguelike.ui.appearance :as appearance]
             [roguelike.ui.appearance.item :as item]
             [roguelike.ui :as ui])
@@ -71,6 +72,7 @@
   (let [mode (ui/current-mode ui)]
     (case (:screen mode)
       :prompt (.putString tg start-col 0 (:message mode))
+      :item-select nil
       (when-let [msg (:current-msg ui)]
         (.putString tg start-col msg-row msg)))))
 
@@ -122,6 +124,27 @@
     (draw-stat-line tg start-row width "HP" (str current-hp "/" max-hp))
     (draw-stat-line tg (inc start-row) width "Depth" (inc level))))
 
+(defn draw-item-select
+  "Draws the item picker over the map, similar to Angband. The prompt and header
+  on the top line, then one row per item."
+  [tg world frame width]
+  (let [flavors (world/flavors world)
+        known (world/known-items world)
+        entries (item-select/selectable (world/player-pack world) (:filter frame))
+        rows (item-select/rows entries flavors known)
+        max-len (apply max (map #(+ (count (:label %)) (count (:text %))) rows))
+        col (max 0 (min (- width 1 max-len) (- (max (count (:prompt frame)) 15) 2)))
+        blank (apply str (repeat (- width (dec col)) \space))]
+    (.setForegroundColor tg (style->color :bright))
+    (.putString tg 0 0 (item-select/header (:prompt frame) entries))
+    (doseq [[i {:keys [label text color]}] (map-indexed vector rows)]
+      (let [row (inc i)]
+        (.putString tg (dec col) row blank)
+        (.setForegroundColor tg (style->color :bright))
+        (.putString tg col row label)
+        (.setForegroundColor tg (style->color color))
+        (.putString tg (+ col (count label)) row text)))))
+
 (defn draw-game
   [screen game]
   (let [world (:world game)
@@ -137,4 +160,7 @@
     (draw-actors tg world origin (:viewport layout) (:play-start-row layout) (:play-start-col layout))
     (draw-message tg ui 12 (:msg-row layout))
     (draw-sidebar tg world layout)
+    (let [mode (ui/current-mode ui)]
+      (when (= :item-select (:screen mode))
+        (draw-item-select tg world mode (:width dimensions))))
     (.refresh screen)))
