@@ -180,3 +180,30 @@
         inv (:inventory (world/player-entity w))]
     (is (= 1 (count inv)))
     (is (= 2 (:item/quantity (first inv))))))
+
+;;; Quaff
+
+(defn- quaff-world
+  [quantity known]
+  (make-world :player (make-player {:inventory [{:item/kind :potion/harm :item/id 7
+                                                 :item/stackable? true :item/quantity quantity}]
+                                    :knowledge {:item/known known}})))
+
+(deftest quaffing-uses-up-one-potion
+  (let [[w _] (world/update-world (quaff-world 3 #{}) 0 {:action/type :world/quaff :item-id 7})]
+    (is (= 2 (:item/quantity (first (world/player-inventory w)))))))
+
+(deftest quaffing-the-last-potion-removes-the-stack
+  (let [[w _] (world/update-world (quaff-world 1 #{}) 0 {:action/type :world/quaff :item-id 7})]
+    (is (empty? (world/player-inventory w)))))
+
+(deftest quaffing-identifies-the-kind
+  (let [[w [event]] (world/update-world (quaff-world 2 #{}) 0 {:action/type :world/quaff :item-id 7})]
+    (is (world/known-item? w :potion/harm))
+    (is (= :world/quaffed (:event/type event)))
+    (is (:learned? event))
+    (is (= 2 (:item/quantity (:item event))) "the event shows the stack as it was before drinking")))
+
+(deftest quaffing-a-known-potion-learns-nothing-new
+  (let [[_ [event]] (world/update-world (quaff-world 2 #{:potion/harm}) 0 {:action/type :world/quaff :item-id 7})]
+    (is (false? (:learned? event)))))

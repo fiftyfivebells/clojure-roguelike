@@ -96,3 +96,18 @@
 
 (deftest empty-inventory-makes-an-empty-pack
   (is (empty? (inventory/pack [] flavors #{}))))
+
+;;; find-item / remove-one
+
+(deftest find-item-looks-up-by-id
+  (let [inv [(make-item :potion/harm 1) (make-item :edged/dagger 2)]]
+    (is (= :edged/dagger (:item/kind (inventory/find-item inv 2))))
+    (is (nil? (inventory/find-item inv 99)))))
+
+(deftest remove-one-decrements-a-stack
+  (let [inv [(assoc (make-item :potion/harm 1) :item/quantity 3) (make-item :edged/dagger 2)]]
+    (is (= [2 1] (map :item/quantity (inventory/remove-one inv 1))))))
+
+(deftest remove-one-drops-the-last-of-a-stack
+  (let [inv [(make-item :potion/harm 1) (make-item :edged/dagger 2)]]
+    (is (= [2] (map :item/id (inventory/remove-one inv 1))))))
