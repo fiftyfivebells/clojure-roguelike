@@ -504,6 +504,22 @@
         [new-world [{:event/type :world/pickup :items items}]])
       [world [{:event/type :world/pickup-failed :reason :no-item}]])))
 
+(defn- quaff
+  "The player drinks one potion from the stack with the given id. The potion
+  is used up and its kind becomes known. The event carries the item as it was
+  before drinking, and whether this drink identified it.
+  Effects aren't applied yet."
+  [world item-id]
+  (let [item (inventory/find-item (player-inventory world) item-id)]
+    (when (nil? item)
+      (throw (ex-info "no item with that id in the player's inventory" {:item/id item-id})))
+    (let [kind (:item/kind item)
+          learned? (not (known-item? world kind))
+          world (-> world
+                    (update-actor (player-id world) #(update % :inventory inventory/remove-one item-id))
+                    (learn-item-kind kind))]
+      [world [{:event/type :world/quaffed :item item :learned? learned?}]])))
+
 (defn update-world
   [world actor-id action]
   (case (:action/type action)
@@ -521,6 +537,8 @@
                   [world [{:event/type :world/wait}]])
 
     :world/get (attempt-pickup world actor-id)
+
+    :world/quaff (quaff world (:item-id action))
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))
