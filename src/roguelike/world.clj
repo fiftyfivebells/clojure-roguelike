@@ -264,6 +264,13 @@
   (let [player (player-entity world)]
     (contains? (get-in player [:knowledge :item/known]) item-kind)))
 
+(defn- learn-item-kind
+  "Marks an item kind as identified. Knowledge is per kind, so every item of
+  that kind is known from now on."
+  [world item-kind]
+  (update-actor world (player-id world)
+                #(update-in % [:knowledge :item/known] conj item-kind)))
+
 (defn tile-classifier
   ([world]
    (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))
