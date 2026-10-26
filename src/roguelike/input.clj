@@ -32,9 +32,15 @@
 
     ;; actions (get, quaff, etc.)
     (= (:key key-event) \i) {:action/type :ui/item-select
-                              :prompt "Select Item:"
-                              :filter {}
-                              :empty "You have nothing in your inventory."}
+                             :prompt "Select Item:"
+                             :filter {}
+                             :empty "You have nothing in your inventory."}
+
+    (= (:key key-event) \q) {:action/type :ui/item-select
+                             :on-select {:action/type :world/quaff}
+                             :prompt "Quaff which potion?"
+                             :filter {:item/verb :quaff}
+                             :empty "You have no potions to quaff."}
 
     (= (:key key-event) \g) {:action/type :world/get}
 
