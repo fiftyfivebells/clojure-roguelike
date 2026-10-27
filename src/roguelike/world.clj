@@ -560,7 +560,7 @@
   [world item-id]
   (some #(when (= item-id (:item/id (:item %))) (:label %)) (player-pack world)))
 
-(defn- quaff
+(defn- use-item
   "The player drinks one potion from the stack with the given id. The potion
   is used up, its kind becomes known, and its effects are applied. The
   :world/quaffed event carries the item as it was before drinking, whether
@@ -600,8 +600,9 @@
     :world/get (attempt-pickup world actor-id)
 
     :world/quaff (quaff world (:item-id action) :world/quaffed)
+    :world/quaff (use-item world (:item-id action) :world/quaffed)
 
-    :world/read (quaff world (:item-id action) :world/read-scroll)
+    :world/read (use-item world (:item-id action) :world/read-scroll)
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))
