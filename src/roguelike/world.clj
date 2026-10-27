@@ -520,6 +520,21 @@
                               (update actor :hp/current #(min (:hp/max actor) (+ % amount)))))]
     [world [{:event/type :world/healed :amount amount}]]))
 
+(defmethod apply-effect :teleport
+  ;; Rolls a distance from the effect's dice, then lands on a random open
+  ;; square whose distance from the start is as close to that roll as the
+  ;; level allows.
+  [world actor-id effect]
+  (let [start (:pos (get-actor world actor-id))
+        [world distance] (rng/roll-dice world effect)
+        off-by #(abs (- distance (Math/round (Math/sqrt (dungeon/distance-sq start %)))))
+        ;; the player isn't in the level's entities, so we claim the start square
+        spots (spawn/open-positions (current-level world) #{start})
+        best (apply min (map off-by spots))
+        [world dest] (rng/draw-any world (filterv #(= best (off-by %)) spots))]
+    [(move-actor world actor-id dest)
+     [{:event/type :world/teleported :from start :to dest}]]))
+
 (defmethod apply-effect :damage
   [world actor-id effect]
   (let [[world amount] (rng/roll-dice world effect)
