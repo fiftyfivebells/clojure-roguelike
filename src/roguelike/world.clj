@@ -504,11 +504,47 @@
         [new-world [{:event/type :world/pickup :items items}]])
       [world [{:event/type :world/pickup-failed :reason :no-item}]])))
 
+;; Item effects
+
+(defmulti apply-effect
+  "Applies one item effect to an actor. Effects are data in the item catalog,
+  like {:effect/type :heal :dice 2 :sides 4}; this interprets them.
+  Returns [world events]."
+  (fn [_world _actor-id effect] (:effect/type effect)))
+
+(defmethod apply-effect :heal
+  [world actor-id effect]
+  (let [[world amount] (rng/roll-dice world effect)
+        world (update-actor world actor-id
+                            (fn [actor]
+                              (update actor :hp/current #(min (:hp/max actor) (+ % amount)))))]
+    [world [{:event/type :world/healed :amount amount}]]))
+
+(defmethod apply-effect :damage
+  [world actor-id effect]
+  (let [[world amount] (rng/roll-dice world effect)
+        actor (get-actor world actor-id)
+        hp (- (:hp/current actor) amount)
+        damaged {:event/type :world/damaged :amount amount}]
+    (if (pos? hp)
+      [(update-actor world actor-id #(assoc % :hp/current hp)) [damaged]]
+      (let [victim (describe world actor)]
+        [(resolve-death world victim)
+         [damaged {:event/type :world/killed :defender victim}]]))))
+
+(defn- apply-effects
+  [world actor-id effects]
+  (reduce (fn [[world events] effect]
+            (let [[world new-events] (apply-effect world actor-id effect)]
+              [world (into events new-events)]))
+          [world []]
+          effects))
+
 (defn- quaff
   "The player drinks one potion from the stack with the given id. The potion
-  is used up and its kind becomes known. The event carries the item as it was
-  before drinking, and whether this drink identified it.
-  Effects aren't applied yet."
+  is used up, its kind becomes known, and its effects are applied. The
+  :world/quaffed event carries the item as it was before drinking, and whether
+  this drink identified it; effect events follow it."
   [world item-id]
   (let [item (inventory/find-item (player-inventory world) item-id)]
     (when (nil? item)
@@ -517,8 +553,9 @@
           learned? (not (known-item? world kind))
           world (-> world
                     (update-actor (player-id world) #(update % :inventory inventory/remove-one item-id))
-                    (learn-item-kind kind))]
-      [world [{:event/type :world/quaffed :item item :learned? learned?}]])))
+                    (learn-item-kind kind))
+          [world effect-events] (apply-effects world (player-id world) (:item/effects item))]
+      [world (into [{:event/type :world/quaffed :item item :learned? learned?}] effect-events)])))
 
 (defn update-world
   [world actor-id action]
