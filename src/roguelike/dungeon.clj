@@ -118,7 +118,7 @@
           (stamp-vertical-corridor y1 y2 x1)
           (stamp-horizontal-corridor x1 x2 y2)))))
 
-(defn- distance-sq
+(defn distance-sq
   "Computes the distance between two points in the grid."
   [[x1 y1] [x2 y2]]
   (let [dx (- x1 x2)

@@ -551,7 +551,7 @@
   :world/quaffed event carries the item as it was before drinking, whether
   this drink identified it, and the stack's letter (where it sits now, or
   where it was if none are left); effect events follow it."
-  [world item-id]
+  [world item-id event-type]
   (let [item (inventory/find-item (player-inventory world) item-id)]
     (when (nil? item)
       (throw (ex-info "no item with that id in the player's inventory" {:item/id item-id})))
@@ -563,7 +563,7 @@
                     (learn-item-kind kind))
           label (or (pack-label world item-id) label-before)
           [world effect-events] (apply-effects world (player-id world) (:item/effects item))]
-      [world (into [{:event/type :world/quaffed :item item :learned? learned? :label label}]
+      [world (into [{:event/type event-type :item item :learned? learned? :label label}]
                    effect-events)])))
 
 (defn update-world
@@ -584,7 +584,9 @@
 
     :world/get (attempt-pickup world actor-id)
 
-    :world/quaff (quaff world (:item-id action))
+    :world/quaff (quaff world (:item-id action) :world/quaffed)
+
+    :world/read (quaff world (:item-id action) :world/read-scroll)
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))
