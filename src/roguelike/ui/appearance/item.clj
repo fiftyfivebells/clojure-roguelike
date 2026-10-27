@@ -169,11 +169,13 @@
 
 (defn describe
   "The item's name with its count, like Angband's item lists: 'a dagger',
-  'an azure potion', '3 Potions of Harm'."
+  'an azure potion', '3 Potions of Harm', 'no more Potions of Harm'."
   [item flavors known]
   (let [n (:item/quantity item)]
-    (if (> n 1)
-      (str n " " (item-name item flavors known :many))
+    (cond
+      (zero? n) (str "no more " (item-name item flavors known :many))
+      (> n 1)   (str n " " (item-name item flavors known :many))
+      :else
       (let [single (item-name item flavors known :one)]
         (if (#{\a \e \i \o \u} (Character/toLowerCase (first single)))
           (str "an " single)
