@@ -88,10 +88,10 @@
                   "travel")]
     (str "You " dir-msg " to level " depth ".")))
 
-(defn- quaffed-message
-  "What's left after drinking, like Angband: 'You have 2 Potions of Harm (a).'
-  or 'You have no more Potions of Harm (a).' The potion is known by now, so it
-  always shows its real name."
+(defn- remaining-message
+  "What's left after using an item, like Angband: 'You have 2 Potions of Harm
+  (a).' or 'You have no more Potions of Harm (a).' The item is known by now, so
+  it always shows its real name."
   [{:keys [item label]} flavors]
   (let [remaining (update item :item/quantity dec)
         known #{(:item/kind item)}]
@@ -146,8 +146,8 @@
     :world/wait
     (add-message ui "You sit patiently and wait.")
 
-    :world/quaffed
-    (add-message ui (quaffed-message event flavors))
+    (:world/quaffed :world/read-scroll)
+    (add-message ui (remaining-message event flavors))
 
     :world/healed
     (add-message ui (healed-message (:amount event)))
