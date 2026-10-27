@@ -1,6 +1,7 @@
 (ns roguelike.input
   (:require
-    [roguelike.ui :as ui])
+    [roguelike.ui :as ui]
+    [clojure.string :as str])
   (:import [com.googlecode.lanterna.input KeyType]))
 
 (defn drain-input!
@@ -19,6 +20,32 @@
      :alt?     (.isAltDown keystroke)
      :key-type (.getKeyType keystroke)}))
 
+(defn- use-picker
+  "Picker frame for commands that use one item. Takes in the verb, noun, and
+  plural version so that we can return a consistent action. The output for
+  [:quaff \"potion\" \"potions\"] will be:
+  {:prompt \"Quadd which potion?\"
+   :filter {:item/verb :quaff}
+   :empty  \"You have no potions to quaff.\"
+   :on-select {:action/type :world/quaff}
+  }"
+  [verb noun plural]
+  (let [word (name verb)]
+    {:prompt    (str (str/capitalize word) " which " noun "?")
+     :filter    {:item/verb verb}
+     :empty     (str "You have no " plural " to " word ".")
+     :on-select {:action/type (keyword "world" word)}}))
+
+(def ^:private item-pickers
+  "Commands that open the item picker, by key. Each value is a picker frame
+  (see roguelike.ui.item-select). :on-select is the action a pick sends, with
+  :item-id attached; without one, picking does nothing."
+  {\i {:prompt "Select Item:"
+       :filter {}
+       :empty  "You have nothing in your inventory."}
+   \q (use-picker :quaff "potion" "potions")
+   \r (use-picker :read  "scroll" "scrolls")})
+
 (defn play-mode
   "Play mode input handler. When the world is in :play mode, it reads movement
    keys and other commands and then returns a command type depending on the
@@ -30,17 +57,9 @@
      :message "Really quit? (y to confirm, any other key to cancel)"
      :on-yes {:action/type :ui/quit}}
 
-    ;; actions (get, quaff, etc.)
-    (= (:key key-event) \i) {:action/type :ui/item-select
-                             :prompt "Select Item:"
-                             :filter {}
-                             :empty "You have nothing in your inventory."}
-
-    (= (:key key-event) \q) {:action/type :ui/item-select
-                             :on-select {:action/type :world/quaff}
-                             :prompt "Quaff which potion?"
-                             :filter {:item/verb :quaff}
-                             :empty "You have no potions to quaff."}
+    ;; actions (inventory, quaff, read, etc.)
+    (contains? item-pickers (:key key-event))
+    (assoc (item-pickers (:key key-event)) :action/type :ui/item-select)
 
     (= (:key key-event) \g) {:action/type :world/get}
 
