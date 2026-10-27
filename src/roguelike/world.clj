@@ -540,22 +540,31 @@
           [world []]
           effects))
 
+(defn- pack-label
+  "The letter the item with this id has in the player's pack, or nil."
+  [world item-id]
+  (some #(when (= item-id (:item/id (:item %))) (:label %)) (player-pack world)))
+
 (defn- quaff
   "The player drinks one potion from the stack with the given id. The potion
   is used up, its kind becomes known, and its effects are applied. The
-  :world/quaffed event carries the item as it was before drinking, and whether
-  this drink identified it; effect events follow it."
+  :world/quaffed event carries the item as it was before drinking, whether
+  this drink identified it, and the stack's letter (where it sits now, or
+  where it was if none are left); effect events follow it."
   [world item-id]
   (let [item (inventory/find-item (player-inventory world) item-id)]
     (when (nil? item)
       (throw (ex-info "no item with that id in the player's inventory" {:item/id item-id})))
     (let [kind (:item/kind item)
           learned? (not (known-item? world kind))
+          label-before (pack-label world item-id)
           world (-> world
                     (update-actor (player-id world) #(update % :inventory inventory/remove-one item-id))
                     (learn-item-kind kind))
+          label (or (pack-label world item-id) label-before)
           [world effect-events] (apply-effects world (player-id world) (:item/effects item))]
-      [world (into [{:event/type :world/quaffed :item item :learned? learned?}] effect-events)])))
+      [world (into [{:event/type :world/quaffed :item item :learned? learned? :label label}]
+                   effect-events)])))
 
 (defn update-world
   [world actor-id action]
