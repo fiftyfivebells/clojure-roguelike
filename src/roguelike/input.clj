@@ -43,6 +43,10 @@
   {\i {:prompt "Select Item:"
        :filter {}
        :empty  "You have nothing in your inventory."}
+   \d {:prompt    "Select item to drop:"
+       :filter    {}
+       :empty     "You have nothing in your inventory."
+       :on-select {:action/type :world/drop}}
    \q (use-picker :quaff "potion" "potions")
    \r (use-picker :read  "scroll" "scrolls")})
 

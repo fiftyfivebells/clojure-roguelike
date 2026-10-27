@@ -106,6 +106,16 @@
     (< amount 35) "You feel much better."
     :else         "You feel very good."))
 
+(defn- dropped-message
+  [{:keys [item]} flavors]
+  (let [known #{(:item/kind item)}]
+    (str "You dropped " (item/describe item flavors known) ".")))
+
+(defn- picked-up-message
+  [{:keys [item known]} flavors]
+  (str "You have " (item/describe item flavors known) "."))
+
+
 ;; what is an event?
 ;; proposed shape:
 ;; :event/type -> the event type
@@ -145,6 +155,12 @@
 
     :world/wait
     (add-message ui "You sit patiently and wait.")
+
+    :world/dropped
+    (add-message ui (dropped-message event flavors))
+
+    :world/picked-up
+    (add-message ui (picked-up-message event flavors))
 
     (:world/quaffed :world/read-scroll)
     (add-message ui (remaining-message event flavors))

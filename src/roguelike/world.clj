@@ -493,17 +493,6 @@
                 (fn [player]
                   (update player :hp/current #(min (:hp/max player) (inc %))))))
 
-(defn- attempt-pickup
-  [world actor-id]
-  (let [current-pos (:pos (get-actor world actor-id))
-        items (level/items-at (current-level world) current-pos)]
-    (if (seq items)
-      (let [new-world (-> world
-                          (update-player-inventory items)
-                          (update-current-level #(level/remove-items % current-pos)))]
-        [new-world [{:event/type :world/pickup :items items}]])
-      [world [{:event/type :world/pickup-failed :reason :no-item}]])))
-
 ;; Item effects
 
 (defmulti apply-effect
@@ -560,14 +549,42 @@
   [world item-id]
   (some #(when (= item-id (:item/id (:item %))) (:label %)) (player-pack world)))
 
+;; TODO: this function currently emits one event that carries only the first
+;; item that was picked up. This is fine if the player picks up a single item,
+;; or a stack of the same item, but it loses info if there are multiple items
+;; picked up. Say the player picks up 2 potions and a dagger. This function only
+;; carries the first item picked up, so we only send one message. I want to
+;; refactor this eventually to emit messages for all the items, but this is part
+;; of a larger refactor of the message log.
+(defn- attempt-pickup
+  [world actor-id]
+  (let [current-pos (:pos (get-actor world actor-id))
+        items (level/items-at (current-level world) current-pos)]
+    (if (seq items)
+      (let [new-world (-> world
+                          (update-player-inventory items)
+                          (update-current-level #(level/remove-items % current-pos)))
+            new-item (inventory/find-item (player-inventory new-world) (first items))]
+        [new-world [{:event/type :world/picked-up :item new-item :known (known-items world)}]])
+      [world [{:event/type :world/pickup-failed :reason :no-item}]])))
+
+(defn- drop-item
+  [world actor-id item-id]
+  (let [current-pos (:pos (get-actor world actor-id))
+        item (inventory/find-item-by-id (player-inventory world) item-id)
+        world (-> world
+                  (update-actor (player-id world) #(update % :inventory inventory/remove-stack item-id))
+                  (update-current-level #(level/add-item % current-pos (assoc item :item/pos current-pos))))]
+    [world [{:event/type :world/dropped :item item}]]))
+
 (defn- use-item
-  "The player drinks one potion from the stack with the given id. The potion
-  is used up, its kind becomes known, and its effects are applied. The
-  :world/quaffed event carries the item as it was before drinking, whether
-  this drink identified it, and the stack's letter (where it sits now, or
-  where it was if none are left); effect events follow it."
+  "The player uses one item from the stack with the given id. The item is used
+  up, its kind becomes known, and its effects are applied. The :world/<verb>
+  event carries the item as it was before using, whether this use identified it,
+  and the stack's letter (where it sits now, or where it was if none are left);
+  effect events follow it."
   [world item-id event-type]
-  (let [item (inventory/find-item (player-inventory world) item-id)]
+  (let [item (inventory/find-item-by-id (player-inventory world) item-id)]
     (when (nil? item)
       (throw (ex-info "no item with that id in the player's inventory" {:item/id item-id})))
     (let [kind (:item/kind item)
@@ -599,7 +616,8 @@
 
     :world/get (attempt-pickup world actor-id)
 
-    :world/quaff (quaff world (:item-id action) :world/quaffed)
+    :world/drop (drop-item world actor-id (:item-id action))
+
     :world/quaff (use-item world (:item-id action) :world/quaffed)
 
     :world/read (use-item world (:item-id action) :world/read-scroll)

@@ -20,9 +20,13 @@
   [inventory items]
   (reduce add-item inventory items))
 
-(defn find-item
+(defn find-item-by-id
   [inventory item-id]
   (first (filter #(= item-id (:item/id %)) inventory)))
+
+(defn find-item
+  [inventory item]
+  (first (filter #(= (:item/kind item) (:item/kind %)) inventory)))
 
 (defn remove-one
   "Takes one item off the stack with the given id. A stack of one is removed
@@ -35,6 +39,12 @@
                   (> (:item/quantity item) 1) (update item :item/quantity dec)
                   :else nil)))
         inventory))
+
+(defn remove-stack
+  "Takes the entire stack with the given id and removes it from the inventory
+  entirely."
+  [inventory item-id]
+  (vec (remove #(= (:item/id %) item-id) inventory)))
 
 ;; Order categories appear in the pack. Mirrors Angband's descending tval order
 ;; (list-tvals.h): potion, scroll, sword, polearm, hafted.

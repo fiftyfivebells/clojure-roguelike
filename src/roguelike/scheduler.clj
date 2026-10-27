@@ -9,7 +9,8 @@
     :world/ascend 10
     :world/move 10
     :world/wait 10
-    :world/get 10
+    :world/get 5
+    :world/drop 5
     :world/quaff 10
     :world/read 10
     (throw (ex-info "this action doesn't exist" {:action action}))))
