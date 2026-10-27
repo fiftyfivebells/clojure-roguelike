@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
             [roguelike.level :as level]
+            [roguelike.rng :as rng]
             [roguelike.world :as world]))
 
 (defn- make-player
@@ -184,10 +185,13 @@
 ;;; Quaff
 
 (defn- quaff-world
-  [quantity known]
-  (make-world :player (make-player {:inventory [{:item/kind :potion/harm :item/id 7
-                                                 :item/stackable? true :item/quantity quantity}]
-                                    :knowledge {:item/known known}})))
+  ([quantity known] (quaff-world quantity known []))
+  ([quantity known effects]
+   (assoc (make-world :player (make-player {:inventory [{:item/kind :potion/harm :item/id 7
+                                                         :item/stackable? true :item/quantity quantity
+                                                         :item/effects effects}]
+                                            :knowledge {:item/known known}}))
+          :rng-state (rng/make 1))))
 
 (deftest quaffing-uses-up-one-potion
   (let [[w _] (world/update-world (quaff-world 3 #{}) 0 {:action/type :world/quaff :item-id 7})]
@@ -207,3 +211,89 @@
 (deftest quaffing-a-known-potion-learns-nothing-new
   (let [[_ [event]] (world/update-world (quaff-world 2 #{:potion/harm}) 0 {:action/type :world/quaff :item-id 7})]
     (is (false? (:learned? event)))))
+
+;;; Effects
+
+(defn- effect-world
+  [hp max-hp]
+  (assoc (make-world :player (make-player {:hp/current hp :hp/max max-hp}))
+         :rng-state (rng/make 1)))
+
+(defn- player-hp
+  [w]
+  (:hp/current (world/player-entity w)))
+
+(deftest heal-adds-the-rolled-amount
+  (let [[w [event]] (world/apply-effect (effect-world 5 20) 0 {:effect/type :heal :dice 2 :sides 4})]
+    (is (= :world/healed (:event/type event)))
+    (is (<= 2 (:amount event) 8))
+    (is (= (+ 5 (:amount event)) (player-hp w)))))
+
+(deftest heal-stops-at-max-hp
+  (let [[w _] (world/apply-effect (effect-world 9 10) 0 {:effect/type :heal :dice 2 :sides 4})]
+    (is (= 10 (player-hp w)))))
+
+(deftest damage-subtracts-the-rolled-amount
+  (let [[w [event]] (world/apply-effect (effect-world 20 20) 0 {:effect/type :damage :dice 2 :sides 4})]
+    (is (= :world/damaged (:event/type event)))
+    (is (<= 2 (:amount event) 8))
+    (is (= (- 20 (:amount event)) (player-hp w)))
+    (is (not (world/player-dead? w)))))
+
+(deftest fatal-damage-kills-the-player
+  (let [[w events] (world/apply-effect (effect-world 1 20) 0 {:effect/type :damage :dice 2 :sides 4})]
+    (is (world/player-dead? w))
+    (is (= [:world/damaged :world/killed] (map :event/type events)))
+    (is (= {:player? true} (:defender (second events))))))
+
+(deftest effects-roll-from-the-world-rng
+  (let [w (effect-world 5 20)
+        [w' _] (world/apply-effect w 0 {:effect/type :heal :dice 2 :sides 4})]
+    (is (not= (:rng-state w) (:rng-state w')))
+    (is (= (world/apply-effect w 0 {:effect/type :heal :dice 2 :sides 4})
+           (world/apply-effect w 0 {:effect/type :heal :dice 2 :sides 4}))
+        "same rng state, same roll")))
+
+(deftest quaffing-applies-the-potions-effects-after-the-quaffed-event
+  (let [w (assoc-in (quaff-world 1 #{} [{:effect/type :damage :dice 1 :sides 1}]) [:player :hp/current] 10)
+        [w events] (world/update-world w 0 {:action/type :world/quaff :item-id 7})]
+    (is (= [:world/quaffed :world/damaged] (map :event/type events)))
+    (is (= 9 (player-hp w)))))
+
+(deftest quaffed-event-carries-the-stacks-letter
+  (let [w (-> (quaff-world 2 #{})
+              (update-in [:player :inventory] conj {:item/kind :edged/dagger :item/id 8 :item/quantity 1
+                                                    :item/category :edged})
+              (assoc-in [:player :inventory 0 :item/category] :potion))
+        [_ [event]] (world/update-world w 0 {:action/type :world/quaff :item-id 7})]
+    (is (= \a (:label event)))))
+
+(deftest quaffed-event-keeps-the-letter-when-none-are-left
+  (let [w (assoc-in (quaff-world 1 #{}) [:player :inventory 0 :item/category] :potion)
+        [_ [event]] (world/update-world w 0 {:action/type :world/quaff :item-id 7})]
+    (is (= \a (:label event)))))
+
+;;; Teleport
+
+(defn- teleport-world
+  [& monsters]
+  (assoc (make-world :level (apply make-lit-room-level monsters))
+         :rng-state (rng/make 1)))
+
+(deftest teleport-lands-at-the-rolled-distance
+  ;; 1d1 always rolls 1, so the player moves exactly one step.
+  (let [[w [event]] (world/apply-effect (teleport-world) 0 {:effect/type :teleport :dice 1 :sides 1})
+        [x y] (world/player-pos w)]
+    (is (= 1 (max (abs (- x 1)) (abs (- y 1)))))
+    (is (= {:event/type :world/teleported :from [1 1] :to [x y]} event))))
+
+(deftest teleport-never-lands-on-an-actor
+  (testing "two of the three squares one step away are taken"
+    (let [w (teleport-world (make-monster 1 {:pos [2 1]}) (make-monster 2 {:pos [2 2]}))
+          [w _] (world/apply-effect w 0 {:effect/type :teleport :dice 1 :sides 1})]
+      (is (= [1 2] (world/player-pos w))))))
+
+(deftest teleport-goes-as-far-as-the-level-allows
+  (testing "a 20-step roll in a room only 9 steps wide lands on the far wall side"
+    (let [[w _] (world/apply-effect (teleport-world) 0 {:effect/type :teleport :dice 20 :sides 1})]
+      (is (= 10 (first (world/player-pos w)))))))
