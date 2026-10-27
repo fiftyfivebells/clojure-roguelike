@@ -16,7 +16,10 @@
    :item/verb :read})
 
 (def ^:private scrolls
-  {:scroll/phase-door {:item/effects [{:effect/type :teleport :dice 2 :sides 5}]
+  {:scroll/teleport {:item/effects [{:effect/type :teleport :dice 10 :sides 10}]
+                          :item/alloc {:commonness 40 :from 5}}
+
+   :scroll/phase-door {:item/effects [{:effect/type :teleport :dice 2 :sides 5}]
                        :item/alloc {:commonness 50 :from 0}}})
 
 (def ^:private edged

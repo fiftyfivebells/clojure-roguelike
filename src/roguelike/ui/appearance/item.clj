@@ -40,7 +40,8 @@
    :kinds      potion-kinds})
 
 (def ^:private scroll-kinds
-  {:scroll/phase-door {:name "Phase Door"}})
+  {:scroll/phase-door {:name "Phase Door"}
+   :scroll/teleport   {:name "Teleport"}})
 
 (def ^:private scroll
   {:glyph "?"
