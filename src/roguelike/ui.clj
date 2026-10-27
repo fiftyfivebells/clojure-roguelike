@@ -88,6 +88,24 @@
                   "travel")]
     (str "You " dir-msg " to level " depth ".")))
 
+(defn- quaffed-message
+  "What's left after drinking, like Angband: 'You have 2 Potions of Harm (a).'
+  or 'You have no more Potions of Harm (a).' The potion is known by now, so it
+  always shows its real name."
+  [{:keys [item label]} flavors]
+  (let [remaining (update item :item/quantity dec)
+        known #{(:item/kind item)}]
+    (str "You have " (item/describe remaining flavors known) " (" label ").")))
+
+(defn- healed-message
+  "Angband's healing messages, chosen by how much was healed."
+  [amount]
+  (cond
+    (< amount 5)  "You feel a little better."
+    (< amount 15) "You feel better."
+    (< amount 35) "You feel much better."
+    :else         "You feel very good."))
+
 ;; what is an event?
 ;; proposed shape:
 ;; :event/type -> the event type
@@ -127,6 +145,15 @@
 
     :world/wait
     (add-message ui "You sit patiently and wait.")
+
+    :world/quaffed
+    (add-message ui (quaffed-message event flavors))
+
+    :world/healed
+    (add-message ui (healed-message (:amount event)))
+
+    :world/damaged
+    (add-message ui "You feel very sick.")
 
     ;; default case
     ui))
