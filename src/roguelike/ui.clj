@@ -107,9 +107,8 @@
     :else         "You feel very good."))
 
 (defn- dropped-message
-  [{:keys [item]} flavors]
-  (let [known #{(:item/kind item)}]
-    (str "You dropped " (item/describe item flavors known) ".")))
+  [{:keys [item known]} flavors]
+  (str "You dropped " (item/describe item flavors known) "."))
 
 (defn- picked-up-message
   [{:keys [item known]} flavors]

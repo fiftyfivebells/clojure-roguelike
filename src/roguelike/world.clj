@@ -576,6 +576,7 @@
                   (update-actor (player-id world) #(update % :inventory inventory/remove-stack item-id))
                   (update-current-level #(level/add-item % current-pos (assoc item :item/pos current-pos))))]
     [world [{:event/type :world/dropped :item item}]]))
+    [world [{:event/type :world/dropped :item dropped :known (known-items world)}]]))
 
 (defn- use-item
   "The player uses one item from the stack with the given id. The item is used
