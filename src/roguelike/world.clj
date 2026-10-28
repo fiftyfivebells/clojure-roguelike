@@ -568,14 +568,25 @@
         [new-world [{:event/type :world/picked-up :item new-item :known (known-items world)}]])
       [world [{:event/type :world/pickup-failed :reason :no-item}]])))
 
+;; TODO: currently, if we drop an item, and then we drop another of the exact
+;; same item, the ui only shows 1 of the items when the player stands on the
+;; stack. When the player 'g'ets the stack, both get picked up, but it's a small
+;; inconsistency. I should fix this later.
 (defn- drop-item
-  [world actor-id item-id]
+  "Drops quantity items from the stack with the given id onto the floor under
+  the actor. Dropping part of a stack splits it off as a new item with its own
+  id. The :world/dropped event carries the item as it landed on the floor."
+  [world actor-id item-id quantity]
   (let [current-pos (:pos (get-actor world actor-id))
         item (inventory/find-item-by-id (player-inventory world) item-id)
+        [dropped world] (if (< quantity (:item/quantity item))
+                          (let [[id world] (allocate-entity-id world)]
+                            [(assoc item :item/id id :item/quantity quantity) world])
+                          [item world])
+        dropped (assoc dropped :item/pos current-pos)
         world (-> world
-                  (update-actor (player-id world) #(update % :inventory inventory/remove-stack item-id))
-                  (update-current-level #(level/add-item % current-pos (assoc item :item/pos current-pos))))]
-    [world [{:event/type :world/dropped :item item}]]))
+                  (update-actor (player-id world) #(update % :inventory inventory/remove-quantity item-id quantity))
+                  (update-current-level #(level/add-item % current-pos dropped)))]
     [world [{:event/type :world/dropped :item dropped :known (known-items world)}]]))
 
 (defn- use-item
@@ -617,7 +628,7 @@
 
     :world/get (attempt-pickup world actor-id)
 
-    :world/drop (drop-item world actor-id (:item-id action))
+    :world/drop (drop-item world actor-id (:item-id action) (:quantity action))
 
     :world/quaff (use-item world (:item-id action) :world/quaffed)
 

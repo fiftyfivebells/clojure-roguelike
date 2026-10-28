@@ -6,7 +6,10 @@
    :prompt    \"Quaff which potion?\"
    :filter    {:item/verb :quaff}     ; item must have every key/value listed
    :empty     \"You have no potions to quaff.\"
-   :on-select {:action/type :world/quaff}}  ; sent with :item-id attached"
+   :on-select {:action/type :world/quaff}}  ; sent with :item-id attached
+
+  Add :quantity-prompt (e.g. \"Drop how many?\") to ask how many of a stack to
+  use; the pick then goes through the number picker and :quantity is attached."
   (:require [roguelike.ui.appearance.item :as item]))
 
 (defn- matches?

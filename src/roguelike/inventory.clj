@@ -40,6 +40,18 @@
                   :else nil)))
         inventory))
 
+(defn remove-quantity
+  "Takes n items off the stack with the given id. Taking all of them removes
+  the stack from the inventory entirely."
+  [inventory item-id n]
+  (into []
+        (keep (fn [item]
+                (cond
+                  (not= item-id (:item/id item)) item
+                  (> (:item/quantity item) n) (update item :item/quantity - n)
+                  :else nil)))
+        inventory))
+
 (defn remove-stack
   "Takes the entire stack with the given id and removes it from the inventory
   entirely."
