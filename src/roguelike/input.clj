@@ -102,6 +102,17 @@
     KeyType/Character {:action/type :ui/select :label (:key key-event)}
     {:action/type :ui/none}))
 
+(defn number-select-mode
+  "Number picker input handler. ESC backs out, Enter submits, Backspace erases,
+  and characters are typed into the buffer (the ui decides which ones count)."
+  [key-event]
+  (condp = (:key-type key-event)
+    KeyType/Escape    {:action/type :ui/return}
+    KeyType/Enter     {:action/type :ui/submit}
+    KeyType/Backspace {:action/type :ui/erase}
+    KeyType/Character {:action/type :ui/type :char (:key key-event)}
+    {:action/type :ui/none}))
+
 (defn dead-mode
   []
   {:action/type :ui/quit})
@@ -114,7 +125,7 @@
     :dead (dead-mode)
     :prompt (prompt-mode pressed mode)
     :item-select (item-select-mode pressed)
-
+    :number-select (number-select-mode pressed)
     ;; default:
     ;; TODO: maybe refactor this so play isn't the default
     (play-mode pressed)))

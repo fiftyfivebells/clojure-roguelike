@@ -1,7 +1,8 @@
 (ns roguelike.ui 
   (:require
     [roguelike.ui.appearance.monster :as monster]
-    [roguelike.ui.appearance.item :as item]))
+    [roguelike.ui.appearance.item :as item]
+    [roguelike.ui.number-select :as number-select]))
 
 (defn new-ui
   []
@@ -21,6 +22,10 @@
   [ui]
   (update ui :modes pop))
 
+(defn- update-current-mode
+  [ui f]
+  (update ui :modes #(conj (pop %) (f (peek %)))))
+
 (defn update-mode
   [ui action]
   (case (:action/type action)
@@ -29,6 +34,17 @@
       (push-mode ui {:screen :prompt
                      :message message
                      :on-yes on-yes}))
+
+    :ui/number-select
+    (push-mode ui (-> action
+                      (dissoc :action/type)
+                      (assoc :screen :number-select :text "")))
+
+    :ui/type
+    (update-current-mode ui #(update % :text number-select/type-char (:char action)))
+
+    :ui/erase
+    (update-current-mode ui #(update % :text number-select/erase))
 
     :ui/return
     (pop-mode ui)

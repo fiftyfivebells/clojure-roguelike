@@ -1,6 +1,7 @@
 (ns roguelike.render
   (:require [roguelike.world :as world]
             [roguelike.ui.item-select :as item-select]
+            [roguelike.ui.number-select :as number-select]
             [roguelike.ui.appearance :as appearance]
             [roguelike.ui.appearance.item :as item]
             [roguelike.ui :as ui])
@@ -73,6 +74,7 @@
     (case (:screen mode)
       :prompt (.putString tg start-col 0 (:message mode))
       :item-select nil
+      :number-select (.putString tg start-col 0 (number-select/prompt-line mode))
       (when-let [msg (:current-msg ui)]
         (.putString tg start-col msg-row msg)))))
 
