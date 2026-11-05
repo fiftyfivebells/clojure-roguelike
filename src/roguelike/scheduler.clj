@@ -5,14 +5,16 @@
 (defn- cost-of
   [action]
   (case (:action/type action)
-    :world/descend 10
     :world/ascend 10
-    :world/move 10
-    :world/wait 10
-    :world/get 5
+    :world/descend 10
     :world/drop 5
+    :world/get 5
+    :world/move 10
     :world/quaff 10
     :world/read 10
+    :world/take-off 5
+    :world/wait 10
+    :world/wield 5
     (throw (ex-info "this action doesn't exist" {:action action}))))
 
 (defn- reschedule

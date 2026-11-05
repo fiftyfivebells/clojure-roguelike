@@ -49,7 +49,11 @@
        :quantity-prompt "Drop how many?"
        :on-select       {:action/type :world/drop}}
    \q (use-picker :quaff "potion" "potions")
-   \r (use-picker :read  "scroll" "scrolls")})
+   \r (use-picker :read  "scroll" "scrolls")
+   \w {:prompt "Wear or wield which item?"
+       :filter {:item/verb :wield}
+       :empty "You have no items to wield/wear."
+       :on-select {:action/type :world/wield}}})
 
 (defn play-mode
   "Play mode input handler. When the world is in :play mode, it reads movement

@@ -1,6 +1,7 @@
 (ns roguelike.world
   (:require [clojure.set :as set]
             [roguelike.combat :as combat]
+            [roguelike.equipment :as equipment]
             [roguelike.fov :as fov]
             [roguelike.inventory :as inventory]
             [roguelike.item :as item]
@@ -170,6 +171,10 @@
 (defn player-inventory
   [world]
   (:inventory (player-entity world)))
+
+(defn player-equipment
+  [world]
+  (:equipment (player-entity world)))
 
 (defn update-player-inventory
   [world items]
@@ -611,6 +616,41 @@
       [world (into [{:event/type event-type :item item :learned? learned? :label label}]
                    effect-events)])))
 
+(defn- wield-item
+  "The player wields or wears the item with the given id. It leaves the pack
+  and goes into slot, or into the slot equipment/slot-for picks when slot is
+  nil. Anything it displaces goes back into the pack. A one-handed weapon with
+  both hands full is ambiguous, so the caller is required to pass a slot.
+  The :world/wielded event carries the item, its slot, and the displaced items."
+  [world item-id slot]
+  (let [item (inventory/find-item-by-id (player-inventory world) item-id)]
+    (when (nil? item)
+      (throw (ex-info "no item with that id in the player's inventory" {:item/id item-id})))
+    (let [slot (or slot (equipment/slot-for (player-equipment world) item))]
+      (when (= :ambiguous slot)
+        (throw (ex-info "both hands are full; the slot must be chosen" {:item/id item-id})))
+      (let [[equipment displaced] (equipment/equip (player-equipment world) item slot)
+            world (update-actor world (player-id world)
+                                #(-> %
+                                     (assoc :equipment equipment)
+                                     (update :inventory inventory/remove-stack item-id)
+                                     (update :inventory inventory/add-items displaced)))]
+        [world [{:event/type :world/wielded :item item :slot slot
+                 :removed displaced :known (known-items world)}]]))))
+
+(defn- take-off
+  "The player takes off whatever is in slot and puts it back in the pack. The
+  :world/took-off event carries the item and the slot it came from."
+  [world slot]
+  (let [[equipment item] (equipment/unequip (player-equipment world) slot)]
+    (when (nil? item)
+      (throw (ex-info "nothing is equipped in that slot" {:slot slot})))
+    [(update-actor world (player-id world)
+                   #(-> %
+                        (assoc :equipment equipment)
+                        (update :inventory inventory/add-item item)))
+     [{:event/type :world/took-off :item item :slot slot :known (known-items world)}]]))
+
 (defn update-world
   [world actor-id action]
   (case (:action/type action)
@@ -634,6 +674,10 @@
     :world/quaff (use-item world (:item-id action) :world/quaffed)
 
     :world/read (use-item world (:item-id action) :world/read-scroll)
+
+    :world/wield (wield-item world (:item-id action) (:slot action))
+
+    :world/take-off (take-off world (:slot action))
 
     ;; default: throw an exception, because getting here is a mistake that shouldn't happen
     (throw (ex-info "unknown action type" {:action action}))))

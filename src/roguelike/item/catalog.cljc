@@ -47,7 +47,8 @@
 
 (def ^:private weapon-defaults
   {:item/stackable? false
-   :item/slot :weapon})
+   :item/slot :weapon
+   :item/verb :wield})
 
 (def items
   {:potion  (merge potion-defaults {:kinds potions})
