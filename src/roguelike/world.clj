@@ -8,6 +8,7 @@
             [roguelike.item.spawn :as item-spawn]
             [roguelike.knowledge :as knowledge]
             [roguelike.level :as level]
+            [roguelike.player :as player]
             [roguelike.rng :as rng]
             [roguelike.spawn :as spawn]
             [roguelike.dungeon :as dungeon]))
@@ -647,19 +648,7 @@
    (let [first-dungeon (dungeon/generate seed 0)
          player-start-pos (level/room-center (first (level/get-rooms first-dungeon)))
          world {:world-seed seed
-                :player {:entity/id 0
-                         :entity/type :player
-                         :pos player-start-pos
-                         :sight/radius 4  ;; TODO: just a random magic number, fix to be more robust later
-                         :next-time 0
-                         :hp/current 15
-                         :hp/max 15
-                         :armor-class 0
-                         :evasion 10
-                         :to-hit 150
-                         :attacks [{:method :smash :effect :physical :dice 3 :sides 4}]
-                         :inventory []
-                         :knowledge {:item/known #{}}}
+                :player (player/new-player player-start-pos)
                 :current-level-id 0
                 :levels {0 first-dungeon}
                 :next-entity-id 1
