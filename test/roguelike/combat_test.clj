@@ -165,6 +165,15 @@
                      (recur ctx' (inc i) (if hit? (inc hits) hits)))))]
       (is (<= 1 hits 30) (str "observed " hits " hits out of " n)))))
 
+;; with to-hit 100 every draw hits, so a -100 modifier must make every draw
+;; miss; anything in between would be flaky to assert on
+(deftest did-hit-applies-the-attacks-to-hit-mod
+  (testing "a per-attack :to-hit-mod is added to the profile's :to-hit"
+    (doseq [s (range 1 100)]
+      (let [[_ hit?] (#'combat/did-hit? (ctx-for s)
+                      {:to-hit-mod -100} {:to-hit 100} {:evasion 0})]
+        (is (false? hit?))))))
+
 ;;; calculate-physical-mitigation
 
 (deftest zero-armor-never-reduces-damage
@@ -233,12 +242,34 @@
           profile (combat/attacker-profile monster)]
       (is (= #{:to-hit :attacks} (set (keys profile)))))))
 
-(deftest attacker-profile-routes-player-through-player-attack-profile
-  (testing "a player entity produces the same key set as a monster's profile"
-    (let [player {:entity/type :player :to-hit 80 :attacks [{:method :swing}]
-                  :hp/current 20 :pos [0 0]}
+(deftest attacker-profile-uses-own-attacks-without-weapons
+  (testing "an entity with no weapons equipped attacks with its own :attacks"
+    (let [unarmed [{:method :smash :effect :physical :dice 3 :sides 4}]
+          player {:entity/type :player :to-hit 80 :attacks unarmed
+                  :equipment {:body {:item/slot :body :item/armor-class 5}}}
           profile (combat/attacker-profile player)]
-      (is (= #{:to-hit :attacks} (set (keys profile)))))))
+      (is (= #{:to-hit :attacks} (set (keys profile))))
+      (is (= unarmed (:attacks profile))))))
+
+(def ^:private dagger
+  {:item/hands 1 :item/method :thrust :item/damage {:dice 1 :sides 4}})
+
+(deftest attacker-profile-weapons-replace-own-attacks
+  (testing "a wielded weapon replaces the unarmed attacks"
+    (let [player {:to-hit 80 :attacks [{:method :smash}]
+                  :equipment {:main-hand dagger}}
+          profile (combat/attacker-profile player)]
+      (is (= [{:method :thrust :effect :physical :dice 1 :sides 4}]
+             (:attacks profile)))))
+  (testing "dual-wielding gives one attack per weapon"
+    (let [player {:to-hit 80 :attacks [{:method :smash}]
+                  :equipment {:main-hand dagger :off-hand dagger}}]
+      (is (= 2 (count (:attacks (combat/attacker-profile player))))))))
+
+(deftest defender-profile-adds-equipment-armor-class
+  (let [entity {:armor-class 2 :hp/current 10
+                :equipment {:body {:item/slot :body :item/armor-class 8}}}]
+    (is (= 10 (:armor-class (combat/defender-profile entity))))))
 
 (deftest defender-profile-defaults-armor-class-and-evasion-to-zero
   (testing "an entity with neither key gets 0 for both, as most catalog species do"

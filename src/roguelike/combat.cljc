@@ -2,12 +2,15 @@
   (:require
    [#?(:clj clojure.math
        :cljs   cljs.math) :as math]
+    [roguelike.equipment :as equipment]
     [roguelike.rng :as rng]))
 
 ;; attacker-profile keys:
 ;; :to-hit  -> number representing a chance to hit
 ;; :attack  -> map of keys describing the attack
 ;;             ex. {:method :swing :effect :physical :dice 2 :sides 4}
+;;             an attack may carry :to-hit-mod, which is added to the
+;;             profile's :to-hit for that attack only (ex. off-hand penalty)
 ;; :attacks -> vector of attacks.
 
 ;; attacker-profile example:
@@ -48,27 +51,23 @@
 ;;                 ie. {:cold 15 :fire 0 etc}
 ;;                 a map means I can assume nil == 0 resistance
 
-(defn- player-attack-profile
-  "Builds the player's attack profile, which needs to take items and stats into
-  account. TODO: for now, this is identical to monsters, but it won't always
-  be."
-  [player]
-  (select-keys player [:to-hit :attacks]))
-
 (defn attacker-profile
   "Takes the relevant keys off the entity to build an 'attacker profile' for the
-  combat functions to use to calculate damage."
+  combat functions to use to calculate damage. Wielded weapons replace the
+  entity's own :attacks. For the player, :attacks are unarmed attacks."
   [attacker]
-  (if (= (:entity/type attacker) :player)
-    (player-attack-profile attacker)
-    (select-keys attacker [:to-hit :attacks])))
+  (let [weapon-attacks (equipment/weapon-attacks (:equipment attacker))]
+    (cond-> (select-keys attacker [:to-hit :attacks])
+      (seq weapon-attacks) (assoc :attacks weapon-attacks))))
 
 (defn defender-profile
   "Takes the relevant keys off the entity to build a 'defender profile' for the
-  combat functions to use to mitigate damage."
+  combat functions to use to mitigate damage. Equipped armor adds to the
+  entity's own :armor-class."
   [defender]
-  (merge {:armor-class 0 :evasion 0}
-         (select-keys defender [:armor-class :evasion :resistances :hp/current])))
+  (-> (merge {:armor-class 0 :evasion 0}
+             (select-keys defender [:armor-class :evasion :resistances :hp/current]))
+      (update :armor-class + (equipment/armor-class (:equipment defender)))))
 
 (defn- roll-damage
   "Simply rolls the dice and gives back the result. This represents the maximum
@@ -96,10 +95,13 @@
     [ctx (merge attack {:damage (:rolled attack) :resisted? false})]))
 
 (defn- did-hit?
-  "TODO: implement me."
+  "Formula to determine if an attack was successful. Takes the to-hit penalty
+  from the attack profile, the evasion chance from the defender profile, then
+  calculates hit chance and rolls to see whether the attack hits."
   [ctx attack {:keys [to-hit]} {:keys [evasion]}]  
   ;; the hit chance formula was adapted from brogue's approach
-  (let [hit-chance (* to-hit (math/pow 0.987 evasion))
+  (let [to-hit (+ to-hit (:to-hit-mod attack 0))
+        hit-chance (* to-hit (math/pow 0.987 evasion))
         [ctx attack-roll] (rng/draw-int ctx 0 100)]
     [ctx (< attack-roll hit-chance)]))
 
