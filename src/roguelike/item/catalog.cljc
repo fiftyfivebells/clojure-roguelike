@@ -42,12 +42,28 @@
 (def ^:private polearm
   {:polearm/spear {:item/damage {:dice 1 :sides 8}
                    :item/method :thrust
+                   :item/hands 2
                    :item/weight 50
                    :item/alloc {:commonness 60 :from 1}}})
 
 (def ^:private weapon-defaults
   {:item/stackable? false
-   :item/slot :weapon
+   :item/hands 1
+   :item/verb :wield})
+
+(def ^:private soft-armor
+  {:soft-armor/robe {:item/armor-class 2
+                     :item/weight 20
+                     :item/alloc {:commonness 80 :from 0}}
+
+   :soft-armor/soft-leather-armor {:item/armor-class 4
+                                   :item/weight 40
+                                   :item/alloc {:commonness 60 :from 1}}})
+
+;; armor uses :wield as its verb so the wear/wield picker offers it
+(def ^:private armor-defaults
+  {:item/stackable? false
+   :item/slot :body
    :item/verb :wield})
 
 (def items
@@ -55,4 +71,5 @@
    :scroll  (merge scroll-defaults {:kinds scrolls})
    :edged   (merge weapon-defaults {:kinds edged})
    :hafted  (merge weapon-defaults {:kinds hafted})
-   :polearm (merge weapon-defaults {:kinds polearm})})
+   :polearm (merge weapon-defaults {:kinds polearm})
+   :soft-armor (merge armor-defaults {:kinds soft-armor})})

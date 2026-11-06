@@ -59,9 +59,9 @@
   (vec (remove #(= (:item/id %) item-id) inventory)))
 
 ;; Order categories appear in the pack. Mirrors Angband's descending tval order
-;; (list-tvals.h): potion, scroll, sword, polearm, hafted.
+;; (list-tvals.h): potion, scroll, soft armor, sword, polearm, hafted.
 (def ^:private category-order
-  [:potion :scroll :edged :polearm :hafted])
+  [:potion :scroll :soft-armor :edged :polearm :hafted])
 
 (def ^:private category-rank
   (zipmap category-order (range)))

@@ -18,6 +18,13 @@
    :color :white
    :kinds {:polearm/spear {:name "spear"}}})
 
+(def ^:private soft-armor
+  {:glyph "("
+   :color :white
+   :kinds {:soft-armor/robe {:name "robe"}
+           :soft-armor/soft-leather-armor {:name "soft leather armor"
+                                           :color :brown}}})
+
 (def ^:private potion-kinds
   {:potion/lesser-healing {:name "Lesser Healing"}
    :potion/harm           {:name "Harm"}})
@@ -76,11 +83,13 @@
   (let [edgeds   (flatten-category [:edged edged])
         hafteds  (flatten-category [:hafted hafted])
         polearms (flatten-category [:polearm polearm])
+        soft-armors (flatten-category [:soft-armor soft-armor])
         potions  (flatten-category [:potion potion])
         scrolls  (flatten-category [:scroll scroll])]
     (merge edgeds
            hafteds
            polearms
+           soft-armors
            potions
            scrolls)))
 
