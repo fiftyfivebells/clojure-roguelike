@@ -1,7 +1,9 @@
 (ns roguelike.ui 
   (:require
+    [clojure.string :as str]
     [roguelike.ui.appearance.monster :as monster]
     [roguelike.ui.appearance.item :as item]
+    [roguelike.ui.equipment-select :as equipment-select]
     [roguelike.ui.number-select :as number-select]))
 
 (defn new-ui
@@ -39,6 +41,11 @@
     (push-mode ui (-> action
                       (dissoc :action/type)
                       (assoc :screen :number-select :text "")))
+
+    :ui/choice
+    (push-mode ui (-> action
+                      (dissoc :action/type)
+                      (assoc :screen :choice)))
 
     :ui/type
     (update-current-mode ui #(update % :text number-select/type-char (:char action)))
@@ -130,6 +137,27 @@
   [{:keys [item known]} flavors]
   (str "You have " (item/describe item flavors known) "."))
 
+(defn- wear-verb
+  "Weapons are wielded, everything else is worn."
+  [item]
+  (if (:item/hands item) "wielding" "wearing"))
+
+(defn- were-message
+  [item flavors known]
+  (str "You were " (wear-verb item) " " (item/describe item flavors known) "."))
+
+(defn- wielded-message
+  "Constructs a message to display what the user has wielded/worn."
+  [{:keys [item slot removed known]} flavors]
+  (let [weapon? (:item/hands item)
+        now (str "You are " (wear-verb item) " " (item/describe item flavors known)
+                 (when weapon? (str " (" (equipment-select/slot-names slot) ")"))
+                 ".")]
+    (str/join " " (concat (map #(were-message % flavors known) removed) [now]))))
+
+(defn- took-off-message
+  [{:keys [item known]} flavors]
+  (were-message item flavors known))
 
 ;; what is an event?
 ;; proposed shape:
@@ -176,6 +204,12 @@
 
     :world/picked-up
     (add-message ui (picked-up-message event flavors))
+
+    :world/wielded
+    (add-message ui (wielded-message event flavors))
+
+    :world/took-off
+    (add-message ui (took-off-message event flavors))
 
     (:world/quaffed :world/read-scroll)
     (add-message ui (remaining-message event flavors))

@@ -1,5 +1,6 @@
 (ns roguelike.render
   (:require [roguelike.world :as world]
+            [roguelike.ui.equipment-select :as equipment-select]
             [roguelike.ui.item-select :as item-select]
             [roguelike.ui.number-select :as number-select]
             [roguelike.ui.appearance :as appearance]
@@ -74,6 +75,8 @@
     (case (:screen mode)
       :prompt (.putString tg start-col 0 (:message mode))
       :item-select nil
+      :equipment-select nil
+      :choice (.putString tg start-col 0 (:prompt mode))
       :number-select (.putString tg start-col 0 (number-select/prompt-line mode))
       (when-let [msg (:current-msg ui)]
         (.putString tg start-col msg-row msg)))))
@@ -126,19 +129,15 @@
     (draw-stat-line tg start-row width "HP" (str current-hp "/" max-hp))
     (draw-stat-line tg (inc start-row) width "Depth" (inc level))))
 
-(defn draw-item-select
-  "Draws the item picker over the map, similar to Angband. The prompt and header
-  on the top line, then one row per item."
-  [tg world frame width]
-  (let [flavors (world/flavors world)
-        known (world/known-items world)
-        entries (item-select/selectable (world/player-pack world) (:filter frame))
-        rows (item-select/rows entries flavors known)
-        max-len (apply max (map #(+ (count (:label %)) (count (:text %))) rows))
-        col (max 0 (min (- width 1 max-len) (- (max (count (:prompt frame)) 15) 2)))
+(defn- draw-list
+  "Draws a picker list over the map, similar to Angband. The header on the top
+  line, then one row per entry."
+  [tg prompt header rows width]
+  (let [max-len (apply max (map #(+ (count (:label %)) (count (:text %))) rows))
+        col (max 0 (min (- width 1 max-len) (- (max (count prompt) 15) 2)))
         blank (apply str (repeat (- width (dec col)) \space))]
     (.setForegroundColor tg (style->color :bright))
-    (.putString tg 0 0 (item-select/header (:prompt frame) entries))
+    (.putString tg 0 0 header)
     (doseq [[i {:keys [label text color]}] (map-indexed vector rows)]
       (let [row (inc i)]
         (.putString tg (dec col) row blank)
@@ -146,6 +145,18 @@
         (.putString tg col row label)
         (.setForegroundColor tg (style->color color))
         (.putString tg (+ col (count label)) row text)))))
+
+(defn draw-item-select
+  [tg world frame width]
+  (let [entries (item-select/selectable (world/player-pack world) (:filter frame))
+        rows (item-select/rows entries (world/flavors world) (world/known-items world))]
+    (draw-list tg (:prompt frame) (item-select/header (:prompt frame) entries) rows width)))
+
+(defn draw-equipment-select
+  [tg world frame width]
+  (let [entries (equipment-select/entries (world/player-equipment world))
+        rows (equipment-select/rows entries (world/flavors world) (world/known-items world))]
+    (draw-list tg (:prompt frame) (equipment-select/header (:prompt frame) entries) rows width)))
 
 (defn draw-game
   [screen game]
@@ -163,6 +174,8 @@
     (draw-message tg ui 12 (:msg-row layout))
     (draw-sidebar tg world layout)
     (let [mode (ui/current-mode ui)]
-      (when (= :item-select (:screen mode))
-        (draw-item-select tg world mode (:width dimensions))))
+      (case (:screen mode)
+        :item-select (draw-item-select tg world mode (:width dimensions))
+        :equipment-select (draw-equipment-select tg world mode (:width dimensions))
+        nil))
     (.refresh screen)))

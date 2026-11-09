@@ -24,7 +24,7 @@
   "Picker frame for commands that use one item. Takes in the verb, noun, and
   plural version so that we can return a consistent action. The output for
   [:quaff \"potion\" \"potions\"] will be:
-  {:prompt \"Quadd which potion?\"
+  {:prompt \"Quaff which potion?\"
    :filter {:item/verb :quaff}
    :empty  \"You have no potions to quaff.\"
    :on-select {:action/type :world/quaff}
@@ -55,6 +55,16 @@
        :empty "You have no items to wield/wear."
        :on-select {:action/type :world/wield}}})
 
+(def ^:private equipment-pickers
+  "Commands that open the equipment list, by key. Each value is a frame (see
+  roguelike.ui.equipment-select). :on-select is the action a pick sends, with
+  :slot attached; without one, picking does nothing."
+  {\e {:prompt "Equipment:"
+       :empty  "You are not wearing or wielding anything."}
+   \t {:prompt    "Take off which item?"
+       :empty     "You are not wearing or wielding anything."
+       :on-select {:action/type :world/take-off}}})
+
 (defn play-mode
   "Play mode input handler. When the world is in :play mode, it reads movement
    keys and other commands and then returns a command type depending on the
@@ -69,6 +79,9 @@
     ;; actions (inventory, quaff, read, etc.)
     (contains? item-pickers (:key key-event))
     (assoc (item-pickers (:key key-event)) :action/type :ui/item-select)
+
+    (contains? equipment-pickers (:key key-event))
+    (assoc (equipment-pickers (:key key-event)) :action/type :ui/equipment-select)
 
     (= (:key key-event) \g) {:action/type :world/get}
 
@@ -118,6 +131,14 @@
     KeyType/Character {:action/type :ui/type :char (:key key-event)}
     {:action/type :ui/none}))
 
+(defn choice-mode
+  "Choice prompt input handler. A character is sent as the choice; the game
+  decides whether it's one of the options. Any other key cancels."
+  [key-event]
+  (if (= KeyType/Character (:key-type key-event))
+    {:action/type :ui/choose :label (:key key-event)}
+    {:action/type :ui/return}))
+
 (defn dead-mode
   []
   {:action/type :ui/quit})
@@ -130,6 +151,8 @@
     :dead (dead-mode)
     :prompt (prompt-mode pressed mode)
     :item-select (item-select-mode pressed)
+    :equipment-select (item-select-mode pressed)
+    :choice (choice-mode pressed)
     :number-select (number-select-mode pressed)
     ;; default:
     ;; TODO: maybe refactor this so play isn't the default
