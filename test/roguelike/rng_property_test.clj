@@ -12,8 +12,8 @@
 
 (defspec output-always-32-bit 500
   (prop/for-all [state gen-state]
-                (let [[new-state _output] (next-rng-state state)]
-                  (every? (fn [word] (<= 0 word 0xFFFFFFFF)) new-state))))
+                (let [[_new-state output] (next-rng-state state)]
+                  (<= 0 output 0xFFFFFFFF))))
 
 (defspec state-words-always-32-bit 500
   (prop/for-all [state gen-state]

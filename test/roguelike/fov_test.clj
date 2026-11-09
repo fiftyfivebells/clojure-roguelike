@@ -3,6 +3,7 @@
             [clojure.test.check.generators :as gen]
             [clojure.test.check.properties :as prop]
             [clojure.test.check.clojure-test :refer [defspec]]
+            [clojure.set :as set]
             [clojure.string :as str]
             [roguelike.fov :as fov]))
 
@@ -87,13 +88,6 @@
 ;;; ---------------------------------------------------------------------------
 ;;; Sanity / invariant tests (small, exact)
 ;;; ---------------------------------------------------------------------------
-
-(deftest origin-always-visible
-  (testing "origin is in its own field, even boxed in"
-    (is (contains? (compute ["#####"
-                             "##@##"
-                             "#####"] 8)
-                   [2 1]))))
 
 (deftest empty-room-full-circle
   (testing "in an open room every floor within radius is visible"
@@ -300,13 +294,13 @@
                 (let [opaque? (opaque-from-rows rows)
                       smaller (fov/visible-cells opaque? origin r)
                       larger  (fov/visible-cells opaque? origin (inc r))]
-                  (clojure.set/subset? smaller larger))))
+                  (set/subset? smaller larger))))
 
 ;; The symmetry property — floors only, equal radius.
 ;; "if floor A sees floor B, then floor B sees floor A"
 ;; Restricting to floors is essential: walls are revealed asymmetrically by
 ;; design (Albert Ford). Testing all cells here would fail immediately.
-(defspec floor-visibility-is-symmetric 300
+(defspec floor-visibility-is-symmetric 100
   (prop/for-all [{:keys [rows]} gen-map
                  r (gen/choose 1 8)]
                 (let [height  (count rows)

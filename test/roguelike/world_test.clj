@@ -98,17 +98,11 @@
 
 ;;; player-dead?
 
-(deftest player-dead-is-false-above-zero-hp
-  (testing "a player with hp remaining is not dead"
-    (is (false? (world/player-dead? {:player (make-player {:hp/current 1})})))))
-
-(deftest player-dead-is-true-at-zero-hp
-  (testing "hp/current 0 is the dead threshold"
-    (is (true? (world/player-dead? {:player (make-player {:hp/current 0})})))))
-
-(deftest player-dead-is-true-below-zero-hp
-  (testing "negative hp/current (overkill damage) should also count as dead"
-    (is (true? (world/player-dead? {:player (make-player {:hp/current -5})})))))
+(deftest player-dead-at-zero-hp-or-below
+  (let [dead? #(world/player-dead? {:player (make-player {:hp/current %})})]
+    (is (false? (dead? 1)))
+    (is (true? (dead? 0)))
+    (is (true? (dead? -5)) "overkill damage counts too")))
 
 ;;; Room lighting / lit-room visibility
 
@@ -167,7 +161,7 @@
   (let [lvl (level/add-item (make-lit-room-level) [1 1] (assoc potion :item/pos [1 1]))
         [_ events] (world/update-world (make-world :player (make-player {:inventory []}) :level lvl)
                                        0 {:action/type :world/get})]
-    (is (= [:world/pickup] (map :event/type events)))))
+    (is (= [:world/picked-up] (map :event/type events)))))
 
 (deftest picking-up-the-same-kind-twice-makes-one-stack
   (let [stackable (assoc potion :item/stackable? true :item/quantity 1)
@@ -297,3 +291,57 @@
   (testing "a 20-step roll in a room only 9 steps wide lands on the far wall side"
     (let [[w _] (world/apply-effect (teleport-world) 0 {:effect/type :teleport :dice 20 :sides 1})]
       (is (= 10 (first (world/player-pos w)))))))
+
+;;; Wield / take off
+
+(def ^:private dagger {:item/id 1 :item/kind :edged/dagger :item/quantity 1 :item/hands 1})
+(def ^:private club   {:item/id 2 :item/kind :hafted/club :item/quantity 1 :item/hands 1})
+(def ^:private spear  {:item/id 3 :item/kind :polearm/spear :item/quantity 1 :item/hands 2})
+
+(defn- gear-world
+  [inventory equipment]
+  (make-world :player (make-player {:inventory inventory :equipment equipment
+                                    :knowledge {:item/known #{}}})))
+
+(defn- wield
+  ([w item-id] (wield w item-id nil))
+  ([w item-id slot]
+   (world/update-world w 0 {:action/type :world/wield :item-id item-id :slot slot})))
+
+(deftest wielding-moves-the-item-from-pack-to-equipment
+  (let [[w [event]] (wield (gear-world [dagger] {}) 1)]
+    (is (= [] (world/player-inventory w)))
+    (is (= {:main-hand dagger} (world/player-equipment w)))
+    (is (= :world/wielded (:event/type event)))
+    (is (= :main-hand (:slot event)))
+    (is (= [] (:removed event)))))
+
+(deftest wielding-a-second-one-hander-fills-the-off-hand
+  (let [[w _] (wield (gear-world [club] {:main-hand dagger}) 2)]
+    (is (= {:main-hand dagger :off-hand club} (world/player-equipment w)))))
+
+(deftest wielding-a-two-hander-returns-both-hands-to-the-pack
+  (let [[w [event]] (wield (gear-world [spear] {:main-hand dagger :off-hand club}) 3)]
+    (is (= {:main-hand spear} (world/player-equipment w)))
+    (is (= #{1 2} (set (map :item/id (world/player-inventory w)))))
+    (is (= [dagger club] (:removed event)))))
+
+(deftest wielding-with-an-explicit-slot
+  (let [w (gear-world [(assoc dagger :item/id 4)] {:main-hand dagger :off-hand club})
+        [w [event]] (wield w 4 :off-hand)]
+    (is (= :off-hand (:slot event)))
+    (is (= 4 (get-in (world/player-equipment w) [:off-hand :item/id])))
+    (is (= [club] (:removed event)))
+    (is (= [club] (world/player-inventory w)))))
+
+(deftest wielding-into-full-hands-needs-a-slot
+  (is (thrown? clojure.lang.ExceptionInfo
+               (wield (gear-world [(assoc dagger :item/id 4)] {:main-hand dagger :off-hand club}) 4))))
+
+(deftest taking-off-returns-the-item-to-the-pack
+  (let [[w [event]] (world/update-world (gear-world [] {:main-hand dagger}) 0
+                                        {:action/type :world/take-off :slot :main-hand})]
+    (is (= {} (world/player-equipment w)))
+    (is (= [dagger] (world/player-inventory w)))
+    (is (= {:event/type :world/took-off :item dagger :slot :main-hand}
+           (dissoc event :known)))))

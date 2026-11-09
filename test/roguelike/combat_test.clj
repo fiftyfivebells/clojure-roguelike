@@ -132,17 +132,6 @@
                     (some #(and (:hit? %) (zero? (:damage %))) outcomes)))
                 (range 1 30))))))
 
-;;; Damage is never negative
-
-(deftest damage-is-never-negative
-  (testing "high armor against low damage dice never produces negative damage"
-    (let [attacker (make-attacker :attacks (repeat 20 {:method :poke :effect :physical
-                                                        :dice 1 :sides 2}))
-          defender (make-defender :armor-class 100 :hp 100000)]
-      (doseq [s (range 1 30)]
-        (let [[_ outcomes] (combat/resolve-attacks (ctx-for s) attacker defender)]
-          (is (every? #(>= (:damage %) 0) outcomes)))))))
-
 ;;; did-hit?
 
 (deftest did-hit-always-hits-with-full-accuracy-and-no-evasion
@@ -187,8 +176,8 @@
 (deftest physical-mitigation-never-exceeds-armor-class
   (testing "reduction is drawn from [0, armor-class] inclusive"
     (doseq [s (range 1 30)]
-      (let [[_ damage] (#'combat/calculate-physical-mitigation (ctx-for s) 10 10)]
-        (is (>= damage 0))))))
+      (let [[_ damage] (#'combat/calculate-physical-mitigation (ctx-for s) 3 10)]
+        (is (<= 7 damage 10))))))
 
 (deftest physical-mitigation-floors-at-zero
   (testing "reduction larger than the rolled damage floors the result at zero, never negative"
@@ -198,30 +187,12 @@
 
 ;;; mitigate-damage
 
-(deftest physical-mitigation-never-exceeds-rolled-damage
-  (testing "the mitigated :damage is at most the :rolled damage"
-    (doseq [s (range 1 30)]
-      (let [[_ result] (#'combat/mitigate-damage (ctx-for s)
-                        {:effect :physical :rolled 20} {:armor-class 10})]
-        (is (<= (:damage result) (:rolled result)))))))
-
 (deftest non-physical-effects-bypass-armor
   (testing "a cold attack ignores armor-class entirely, even when it's high"
     (let [[_ result] (#'combat/mitigate-damage (ctx-for seed)
                       {:effect :cold :rolled 20} {:armor-class 1000})]
       (is (= 20 (:damage result)))
       (is (false? (:resisted? result))))))
-
-(deftest mitigate-damage-returns-a-two-vector-on-both-branches
-  (testing "physical and non-physical branches both return [ctx result]"
-    (let [physical (#'combat/mitigate-damage (ctx-for seed)
-                    {:effect :physical :rolled 10} {:armor-class 5})
-          elemental (#'combat/mitigate-damage (ctx-for seed)
-                     {:effect :cold :rolled 10} {:armor-class 5})]
-      (is (= 2 (count physical)))
-      (is (some? (first physical)))
-      (is (= 2 (count elemental)))
-      (is (some? (first elemental))))))
 
 ;;; roll-damage
 

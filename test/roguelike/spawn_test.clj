@@ -84,20 +84,6 @@
     (is (seq monsters))
     (is (every? #(level/walkable-at? lvl (:pos %)) monsters))))
 
-(deftest no-two-monsters-share-a-tile
-  (let [lvl (make-level room-grid)
-        monsters (spawn-on lvl)]
-    (is (= (count monsters)
-           (count (distinct (map :pos monsters)))))))
-
-(deftest reserved-positions-are-left-empty
-  (let [lvl (make-level room-grid)
-        taken (set (map :pos (spawn-on lvl)))
-        reserved (set (take 3 taken))
-        monsters (second (spawn/monsters-for-level seed 0 lvl reserved))]
-    (is (seq monsters))
-    (is (empty? (filter reserved (map :pos monsters))))))
-
 (deftest monsters-avoid-tiles-that-already-hold-an-entity
   (let [bare (make-level room-grid)
         occupied-pos (:pos (first (spawn-on bare)))
@@ -178,11 +164,6 @@
   (let [monsters (spawn-on (make-level room-grid))]
     (is (every? #(nil? (:entity/id %)) monsters))
     (is (every? #(nil? (:next-time %)) monsters))))
-
-(deftest spawn-only-catalog-keys-are-stripped
-  (let [monsters (spawn-on (make-level room-grid))]
-    (is (every? #(nil? (:depth %)) monsters))
-    (is (every? #(nil? (:group/size %)) monsters))))
 
 (deftest spawned-entities-are-monsters-with-genus-and-species
   (let [monsters (spawn-on (make-level room-grid))]

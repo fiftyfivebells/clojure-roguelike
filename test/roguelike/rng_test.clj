@@ -45,32 +45,17 @@
       (is (not= state2 state1))
       (is (not= state3 state2)))))
 
-(deftest test-sfc32-output-is-32bit
-  (let [initial [0xFFFFFFFF 0xFFFFFFFF 0xFFFFFFFF 0xFFFFFFFF]
-        ;; Reference first 5 outputs from official implementation
-        expected-first-outputs [4294967293 4286578679 4286578661 4154458059 3921867616]]
-    (loop [state initial n 0]
-      (if (< n 100)
-        (let [[new-state output] (next-rng-state state)]
-          (is (<= 0 output 0xFFFFFFFF)
-              (str "Output out of range at iteration " n ": " (format "0x%x" output)))
-          (when (< n 5)
-            (is (= output (nth expected-first-outputs n))
-                (str "Output mismatch at iteration " n)))
-          (recur new-state (inc n)))
-        nil))))
-
-(deftest test-sfc32-state-components-in-range
-  (let [initial [0xFFFFFFFF 0xFFFFFFFF 0xFFFFFFFF 0xFFFFFFFF]]
-    (loop [state initial n 0]
-      (if (< n 100)
-        (let [[new-state output] (next-rng-state state)]
-          (doseq [[idx component] (map-indexed vector new-state)]
-            (is (<= 0 component 0xFFFFFFFF)
-                (str "State component " idx " out of range at iteration " n
-                     ": " (format "0x%x" component))))
-          (recur new-state (inc n)))
-        nil))))
+;; range checks live in rng_property_test; this pins the outputs from the
+;; all-ones state, where 32-bit overflow handling matters most
+(deftest test-sfc32-reference-from-max-state
+  (let [;; Reference first 5 outputs from official implementation
+        expected [4294967293 4286578679 4286578661 4154458059 3921867616]
+        outputs (->> [[0xFFFFFFFF 0xFFFFFFFF 0xFFFFFFFF 0xFFFFFFFF] nil]
+                     (iterate (fn [[state _]] (next-rng-state state)))
+                     rest
+                     (map second)
+                     (take 5))]
+    (is (= expected outputs))))
 
 ;;; Mix Helpers
 

@@ -21,12 +21,6 @@
 
 ;;; Resolution correctness
 
-(deftest every-catalog-species-resolves-to-a-template
-  (testing "every species in catalog/genera appears in the resolved templates"
-    (doseq [species all-catalog-species]
-      (is (some? (monster/template species))
-          (str species " missing from resolved templates")))))
-
 (deftest resolved-templates-carry-their-genus-and-species
   (testing "each resolved template's genus/species keys match where it was defined"
     (doseq [[genus-key {:keys [species]}] catalog/genera

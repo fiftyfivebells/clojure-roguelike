@@ -101,8 +101,8 @@
 
 (deftest find-item-looks-up-by-id
   (let [inv [(make-item :potion/harm 1) (make-item :edged/dagger 2)]]
-    (is (= :edged/dagger (:item/kind (inventory/find-item inv 2))))
-    (is (nil? (inventory/find-item inv 99)))))
+    (is (= :edged/dagger (:item/kind (inventory/find-item-by-id inv 2))))
+    (is (nil? (inventory/find-item-by-id inv 99)))))
 
 (deftest remove-one-decrements-a-stack
   (let [inv [(assoc (make-item :potion/harm 1) :item/quantity 3) (make-item :edged/dagger 2)]]
@@ -111,3 +111,11 @@
 (deftest remove-one-drops-the-last-of-a-stack
   (let [inv [(make-item :potion/harm 1) (make-item :edged/dagger 2)]]
     (is (= [2] (map :item/id (inventory/remove-one inv 1))))))
+
+(deftest remove-quantity-takes-part-of-a-stack
+  (let [inv [{:item/id 1 :item/quantity 5} {:item/id 2 :item/quantity 1}]]
+    (is (= [3 1] (map :item/quantity (inventory/remove-quantity inv 1 2))))))
+
+(deftest remove-quantity-of-the-whole-stack-removes-it
+  (let [inv [{:item/id 1 :item/quantity 5} {:item/id 2 :item/quantity 1}]]
+    (is (= [2] (map :item/id (inventory/remove-quantity inv 1 5))))))

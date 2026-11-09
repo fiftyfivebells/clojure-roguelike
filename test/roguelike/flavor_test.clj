@@ -1,25 +1,31 @@
 (ns roguelike.flavor-test
   (:require [clojure.test :refer [deftest is testing]]
-            [roguelike.item.flavor :as flavor]
-            [roguelike.rng :as rng]))
+            [roguelike.item.flavor :as flavor]))
 
-(def kinds [:scroll/a :scroll/b :scroll/c :scroll/d :scroll/e :scroll/f])
+(def ^:private scrolls [:scroll/a :scroll/b :scroll/c :scroll/d :scroll/e :scroll/f])
+(def ^:private potions [:potion/a :potion/b :potion/c])
+(def ^:private kinds {:scroll scrolls :potion potions})
 
-(deftest make-title-test
-  (testing "titles are quoted and advance the rng"
-    (let [holder {:rng-state (rng/make 1)}
-          [next-holder title] (flavor/make-title holder)]
-      (is (re-matches #"\"[a-z]+( [a-z]+)?\"" title))
-      (is (not= (:rng-state holder) (:rng-state next-holder))))))
+(deftest scroll-titles
+  (let [flavors (flavor/roll-flavors 42 kinds)
+        titles (map (comp :title flavors) scrolls)]
+    (testing "every scroll kind gets a title"
+      (is (every? some? titles)))
+    (testing "titles are 2-3 words of 2-3 syllable keywords"
+      (doseq [title titles]
+        (is (<= 2 (count title) 3))
+        (is (every? #(and (<= 2 (count %) 3) (every? keyword? %)) title))))
+    (testing "titles are all different"
+      (is (= (count scrolls) (count (set titles)))))))
 
-(deftest roll-scroll-flavors-test
-  (testing "every kind gets a title, and the titles are all different"
-    (let [flavors (flavor/roll-scroll-flavors 42 kinds)
-          titles (map :title (vals flavors))]
-      (is (= (set kinds) (set (keys flavors))))
-      (is (= (count kinds) (count (set titles))))))
-  (testing "same seed gives same titles, different seed gives different ones"
-    (is (= (flavor/roll-scroll-flavors 42 kinds)
-           (flavor/roll-scroll-flavors 42 kinds)))
-    (is (not= (flavor/roll-scroll-flavors 42 kinds)
-              (flavor/roll-scroll-flavors 43 kinds)))))
+(deftest potion-flavors
+  (let [flavors (flavor/roll-flavors 42 kinds)
+        combos (map flavors potions)]
+    (testing "every potion kind gets an adjective and a color"
+      (is (every? #(and (:adjective %) (:color %)) combos)))
+    (testing "combos are all different"
+      (is (= (count potions) (count (set combos)))))))
+
+(deftest flavors-come-from-the-seed
+  (is (= (flavor/roll-flavors 42 kinds) (flavor/roll-flavors 42 kinds)))
+  (is (not= (flavor/roll-flavors 42 kinds) (flavor/roll-flavors 43 kinds))))

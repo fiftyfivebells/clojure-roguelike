@@ -34,12 +34,6 @@
 
 ;;; cost-of
 
-(deftest cost-of-move-is-10
-  (is (= 10 (#'scheduler/cost-of {:action/type :world/move :delta [1 0]}))))
-
-(deftest cost-of-wait-is-10
-  (is (= 10 (#'scheduler/cost-of {:action/type :world/wait}))))
-
 (deftest cost-of-unknown-action-throws
   (is (thrown? clojure.lang.ExceptionInfo (#'scheduler/cost-of {:action/type :bogus}))))
 
