@@ -8,10 +8,10 @@
 (def ^:private boost-chance 20)
 
 ;; Tunable min/max values for the number of items that can spawn per level.
-;; Right now these are basically random, but they should probably eventually
+;; TODO: these are basically random, but they should probably eventually
 ;; be derived from level size.
-(def ^:private min-items 40)
-(def ^:private max-items 150)
+(def ^:private min-items 4)
+(def ^:private max-items 15)
 
 ;; TODO: this calculation can/should be tuned
 (defn- derive-item-budget
