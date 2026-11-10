@@ -23,14 +23,16 @@
 
 (defn resolve-action
   [world actor-id action]
-  (let [[new-world events] (world/update-world world actor-id action)
-        rescheduled-world (reschedule new-world actor-id (cost-of action))]
+  (let [[world events] (world/update-world world actor-id action)
+        rescheduled-world (cond-> (reschedule world actor-id (cost-of action))
+                            (world/player? world actor-id) world/observe)]
     [rescheduled-world events]))
 
 (defn next-scheduled
-  "Looks at a world and returns what is next up in the event scheduler. It could be the player, an entity,
-  or simply advancing the game time one 'tick'. Returns a map with the info for whichever has the lowest
-  next-time. The priority for breaking ties in lowest time is:
+  "Looks at a world and returns what is next up in the event scheduler. It could
+  be the player, an entity, or simply advancing the game time one 'tick'. Returns
+  a map with the info for whichever has the lowest next-time. The priority for
+  breaking ties in lowest time is:
     - actors are always before tick
     - between actors, lowest id wins always
   This gives a priority (everything else equal) of player -> monster -> tick."

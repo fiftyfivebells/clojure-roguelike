@@ -11,7 +11,7 @@
 (defn- make-player
   [overrides]
   (merge {:entity/id 0 :entity/type :player :pos [1 1] :next-time 0
-          :hp/current 10 :hp/max 10}
+          :hp/current 10 :hp/max 10 :sight/radius 2}
          overrides))
 
 (defn- make-monster

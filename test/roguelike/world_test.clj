@@ -3,6 +3,7 @@
             [clojure.edn :as edn]
             [roguelike.level :as level]
             [roguelike.rng :as rng]
+            [roguelike.vision :as vision]
             [roguelike.world :as world]))
 
 (defn- make-player
@@ -124,22 +125,24 @@
           observed (world/observe w)]
       (is (contains? (level/known-tiles (world/current-level observed)) room-far-wall)))))
 
-(deftest visible-cells-falls-back-to-torch-radius-when-nothing-is-lit
-  (let [w (make-world :player (make-player {:pos room-near-corner}))]
-    (is (not (contains? (world/visible-cells w (world/player-id w) 2) room-far-corner))
+(deftest visible-cells-is-empty-before-observe
+  (is (empty? (world/visible-cells (make-world)))))
+
+(deftest vision-falls-back-to-torch-radius-when-nothing-is-lit
+  (let [w (make-world :player (make-player {:pos room-near-corner}))
+        v (vision/compute (world/current-level w) room-near-corner 2)]
+    (is (not (contains? (:visible v) room-far-corner))
         "without any lit room, the far corner is outside torch radius 2")))
 
-(deftest visible-cells-includes-lit-room-beyond-radius
-  (let [w (make-world :player (make-player {:pos room-near-corner}))
-        lit-level (update w :levels update 0 #(level/light-room-at % room-near-corner))]
-    (is (contains? (world/visible-cells lit-level (world/player-id lit-level) 2) room-far-corner))))
+(deftest visible-cells-includes-lit-room-beyond-radius-after-observe
+  (let [w (world/observe (make-world :player (make-player {:pos room-near-corner})))]
+    (is (contains? (world/visible-cells w) room-far-corner))))
 
-(deftest visible-cells-benefits-any-actor-in-a-lit-room
-  (testing "a monster standing in a lit room also sees beyond its own torch radius"
-    (let [monster (make-monster 1 {:pos room-near-corner :sight/radius 2})
-          w (make-world :level (make-lit-room-level monster))
-          lit-level (update w :levels update 0 #(level/light-room-at % room-near-corner))]
-      (is (contains? (world/visible-cells lit-level 1 2) room-far-corner)))))
+(deftest monster-sees-a-player-standing-in-a-lit-room-beyond-its-radius
+  (testing "the player's room is lit, so a monster in line of sight sees them
+            even from outside its own torch radius"
+    (let [w (world/observe (make-world :player (make-player {:pos room-near-corner})))]
+      (is (vision/sees? (:vision w) room-far-corner 2)))))
 
 ;;; Items
 

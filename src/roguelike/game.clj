@@ -18,10 +18,9 @@
 
 (defn advance
   [game]
-  (let [[new-world events status] (scheduler/advance (:world game))
-        observed                  (world/observe new-world)]
+  (let [[new-world events status] (scheduler/advance (:world game))]
     [(-> game
-         (assoc :world observed)
+         (assoc :world new-world)
          (update :ui ui/apply-events events (world/flavors new-world)))
      status]))
 

@@ -12,7 +12,8 @@
             [roguelike.player :as player]
             [roguelike.rng :as rng]
             [roguelike.spawn :as spawn]
-            [roguelike.dungeon :as dungeon]))
+            [roguelike.dungeon :as dungeon]
+            [roguelike.vision :as vision]))
 
 ;; Levels
 
@@ -208,46 +209,52 @@
   (let [[w h] (level/dimensions level)]
     (long (Math/ceil (Math/sqrt (+ (* w w) (* h h)))))))
 
+;; (defn visible-cells
+;;   "Takes a world and sight-radius and returns a set of tiles visible from the
+;;    actor: everything within torch radius, plus anything in line-of-sight that
+;;    belongs to a currently-lit room (see level/lit-tiles)."
+;;   [world actor-id radius]
+;;   (let [level (current-level world)
+;;         opaque? (partial level/opaque-at? level)
+;;         actor-pos (:pos (get-actor world actor-id))
+;;         torch (fov/visible-cells opaque? actor-pos radius)
+;;         lit (level/lit-tiles level)]
+;;     (if (empty? lit)
+;;       torch
+;;       (set/union torch
+;;                  (set/intersection (fov/visible-cells opaque? actor-pos (max-scan-radius level))
+;;                                     lit)))))
+
 (defn visible-cells
-  "Takes a world and sight-radius and returns a set of tiles visible from the
-   actor: everything within torch radius, plus anything in line-of-sight that
-   belongs to a currently-lit room (see level/lit-tiles)."
-  [world actor-id radius]
-  (let [level (current-level world)
-        opaque? (partial level/opaque-at? level)
-        actor-pos (:pos (get-actor world actor-id))
-        torch (fov/visible-cells opaque? actor-pos radius)
-        lit (level/lit-tiles level)]
-    (if (empty? lit)
-      torch
-      (set/union torch
-                 (set/intersection (fov/visible-cells opaque? actor-pos (max-scan-radius level))
-                                    lit)))))
+  [world]
+  (get-in world [:vision :visible]))
 
 (defn observe
   [world]
   (let [world (update-current-level world #(level/light-room-at % (player-pos world)))
         radius (sight-radius world (player-id world))
-        visible (visible-cells world (player-id world) radius)]
-    (update-current-level world #(level/remember-visible % visible))))
+        v (vision/compute (current-level world) (player-pos world) radius)]
+    (-> world
+        (assoc :vision v)
+        (update-current-level #(level/remember-visible % (:visible v))))))
 
-(defn can-see?
-  [world from-id to-pos]
-  (let [radius (sight-radius world from-id)
-        opaque? (partial level/opaque-at? (current-level world))
-        visible (visible-cells world from-id radius)]
-    (contains? visible to-pos)))
+;; (defn can-see?
+;;   [world from-id to-pos]
+;;   (let [radius (sight-radius world from-id)
+;;         opaque? (partial level/opaque-at? (current-level world))
+;;         visible (visible-cells world from-id radius)]
+;;     (contains? visible to-pos)))
 
 (defn visible-actors
   "Gets a list of active entities in the current level whose position is currently visible to the
   player (per FOV), so monsters outside the player's sight radius don't render."
   [world]
-  (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))]
+  (let [visible (visible-cells world)]
     (filter #(contains? visible (:pos %)) (active-actors world))))
 
 (defn visible-items
   [world]
-  (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))]
+  (let [visible (visible-cells world)]
     (filter #(contains? visible (:item/pos %)) (current-level-items world))))
 
 (defn flavors
@@ -279,7 +286,7 @@
 
 (defn tile-classifier
   ([world]
-   (let [visible (visible-cells world (player-id world) (sight-radius world (player-id world)))
+   (let [visible (visible-cells world)
          curr-lvl (current-level world)
          known   (level/known-tiles curr-lvl)]
      (fn [tile]
