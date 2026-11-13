@@ -325,88 +325,23 @@
   [world [x y]]
   (level/walkable-at? (current-level world) [x y]))
 
-(defn get-proposed-coords
-  "Takes in a world, actor-id, and an [x y] delta. Then it finds the actor using the id and creates
-  proposed coords based on the provided delta. Gives back the new coords."
-  [world actor-id delta]
-  (let [[x y] delta
-        actor (get-actor world actor-id)
-        [actor-x actor-y] (:pos actor)
-        new-x (+ actor-x x)
-        new-y (+ actor-y y)]
-    [new-x new-y]))
-
 (defn move-actor
   "Moves the actor in the world to the provided coordinates. Returns a new world with the actor
   glyph at the new coordinates."
   [world actor-id [x y]]
   (update-actor world actor-id #(assoc % :pos [x y])))
 
-(defn classify-destination
-  "Classifies what's at the given coords for movement purposes: :passable, :wall,
-  :door, or :actor. The default case returns :unknown."
-  [world [x y]]
-  (cond
-    (entity-at world [x y]) :actor
-    (level/walkable-at? (current-level world) [x y]) :passable
-    ;; Only reached when movement is already blocked: this case exists solely to
-    ;; name the obstacle for the player-facing message.
-    :else (case (level/classify-tile (tile-at world [x y]))
-            :wall        :wall
-            :closed-door :door
-            :unknown)))
-
-(defn- describe
+(defn describe
   [world entity]
   (if (player? world (:entity/id entity))
     {:player? true}
     {:id (:entity/id entity) :species (:monster/species entity)}))
 
-(defn- resolve-death
+(defn resolve-death
   [world defender]
   (if (:player? defender)
     (update-actor world (player-id world) #(assoc % :hp/current 0 :dead? true))
     (update-current-level world #(level/remove-entity % (:id defender)))))
-
-(defn- apply-attack
-  [world attack attacker defender]
-  (let [base-result {:attacker (describe world attacker)
-                     :defender (describe world defender)}]
-    (if-not (:hit? attack)
-      [world (merge base-result {:event/type :world/missed
-                                 :hit? false
-                                 :method (:method attack)})]
-      (let [attack-result (merge attack base-result)]
-        (if (:fatal? attack)
-          [(resolve-death world (:defender base-result))
-           (assoc attack-result :event/type :world/killed)]
-          (let [new-hp (- (:hp/current defender) (:damage attack))
-                world (update-actor world
-                                    (:entity/id defender)
-                                    #(assoc % :hp/current new-hp))]
-            [world (assoc attack-result :event/type :world/hit)]))))))
-
-(defn apply-attacks
-  [world attacks attacker defender]
-  (let [reducer (fn
-                  [[world events] attack]
-                  (let [defender (get-actor world (:entity/id defender))
-                        [world event] (apply-attack world attack attacker defender)]
-                    [world (conj events event)]))]
-    (reduce reducer [world []] attacks)))
-
-
-(defn observed-items
-  [world items]
-  (let [known (->> items
-                   (map :item/kind)
-                   (filter #(known-item? world %)))]
-
-    {:event/type :world/items-seen
-     :items items
-     :known (set known)}))
-
-
 
 (defn- change-current-level
   [world id lvl]
@@ -452,12 +387,6 @@
 (defn on-stairs-up?
   [world]
   (level/on-stairs-up? (current-level world) (player-pos world)))
-
-(defn heal-player
-  [world]
-  (update-actor world (player-id world)
-                (fn [player]
-                  (update player :hp/current #(min (:hp/max player) (inc %))))))
 
 ;; Item effects
 
