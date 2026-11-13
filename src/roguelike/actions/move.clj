@@ -50,4 +50,4 @@
 
 (def actions
   {:world/move {:cost 10 :perform attempt-movement}
-   :world/wait {:cost  0 :perform wait}})
+   :world/wait {:cost 10 :perform wait}})
