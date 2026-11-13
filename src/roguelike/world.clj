@@ -445,11 +445,11 @@
         (observe))))
 
 
-(defn- on-stairs-down?
+(defn on-stairs-down?
   [world]
   (level/on-stairs-down? (current-level world) (player-pos world)))
 
-(defn- on-stairs-up?
+(defn on-stairs-up?
   [world]
   (level/on-stairs-up? (current-level world) (player-pos world)))
 
