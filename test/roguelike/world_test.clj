@@ -1,6 +1,7 @@
 (ns roguelike.world-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.edn :as edn]
+            [roguelike.actions :as actions]
             [roguelike.level :as level]
             [roguelike.rng :as rng]
             [roguelike.vision :as vision]
@@ -55,8 +56,8 @@
 
 (deftest world-round-trips-through-edn
   (let [walked (reduce (fn [w delta]
-                          (first (world/update-world w (world/player-id w)
-                                                      {:action/type :world/move :delta delta})))
+                          (first (actions/perform w (world/player-id w)
+                                                  {:action/type :world/move :delta delta})))
                         (world/new-world)
                         [[1 0] [1 0] [0 1]])
         observed (world/observe walked)
@@ -71,8 +72,16 @@
     (is (nil? (level/entity-at (world/current-level w) (world/player-pos w)))
         "the player never starts on top of a monster")))
 
+;;; descend/ascend only work from the matching stairs, so stand the player on
+;;; them first.
+(defn- take-stairs
+  [w action-type stair-kind]
+  (let [pos (level/stair-pos (world/current-level w) stair-kind)
+        w (world/move-actor w (world/player-id w) pos)]
+    (actions/perform w (world/player-id w) {:action/type action-type})))
+
 (deftest descending-populates-the-new-level
-  (let [[w _] (world/descend (world/new-world))]
+  (let [[w _] (take-stairs (world/new-world) :world/descend :stairs/down)]
     (is (seq (level/entities-of (world/current-level w))))
     (is (nil? (level/entity-at (world/current-level w) (world/player-pos w)))
         "the player never arrives on top of a monster")))
@@ -84,14 +93,14 @@
 
 (deftest each-level-gets-its-own-spawn-rng
   (let [w (world/new-world)
-        [down _] (world/descend w)]
+        [down _] (take-stairs w :world/descend :stairs/down)]
     (is (not= (level/rng-state (world/current-level w))
               (level/rng-state (world/current-level down))))))
 
 (deftest revisiting-a-level-does-not-respawn-it
-  (let [[down _] (world/descend (world/new-world))
-        [up _] (world/ascend down)
-        [again _] (world/descend up)]
+  (let [[down _] (take-stairs (world/new-world) :world/descend :stairs/down)
+        [up _] (take-stairs down :world/ascend :stairs/up)
+        [again _] (take-stairs up :world/descend :stairs/down)]
     (is (= (level/entities-of (world/current-level down))
            (level/entities-of (world/current-level again))))
     (is (= (:next-entity-id down) (:next-entity-id again))
@@ -156,14 +165,14 @@
 (deftest stepping-onto-a-known-item-reports-it-as-known
   (let [player (make-player {:pos [2 2] :knowledge {:item/known #{:potion/lesser-healing}}})
         lvl (level/add-item (make-lit-room-level) [3 2] (assoc potion :item/pos [3 2]))
-        [_ events] (world/attempt-movement (make-world :player player :level lvl) 0 [1 0])
+        [_ events] (actions/perform (make-world :player player :level lvl) 0 {:action/type :world/move :delta [1 0]})
         seen (some #(when (= :world/items-seen (:event/type %)) %) events)]
     (is (= #{:potion/lesser-healing} (:known seen)))))
 
 (deftest pickup-returns-a-vector-of-events
   (let [lvl (level/add-item (make-lit-room-level) [1 1] (assoc potion :item/pos [1 1]))
-        [_ events] (world/update-world (make-world :player (make-player {:inventory []}) :level lvl)
-                                       0 {:action/type :world/get})]
+        [_ events] (actions/perform (make-world :player (make-player {:inventory []}) :level lvl)
+                                    0 {:action/type :world/get})]
     (is (= [:world/picked-up] (map :event/type events)))))
 
 (deftest picking-up-the-same-kind-twice-makes-one-stack
@@ -172,9 +181,9 @@
                 (level/add-item [1 1] (assoc stackable :item/pos [1 1]))
                 (level/add-item [2 1] (assoc stackable :item/id 8 :item/pos [2 1])))
         w (make-world :player (make-player {:inventory []}) :level lvl)
-        [w _] (world/update-world w 0 {:action/type :world/get})
+        [w _] (actions/perform w 0 {:action/type :world/get})
         w (world/move-actor w 0 [2 1])
-        [w _] (world/update-world w 0 {:action/type :world/get})
+        [w _] (actions/perform w 0 {:action/type :world/get})
         inv (:inventory (world/player-entity w))]
     (is (= 1 (count inv)))
     (is (= 2 (:item/quantity (first inv))))))
@@ -191,22 +200,22 @@
           :rng-state (rng/make 1))))
 
 (deftest quaffing-uses-up-one-potion
-  (let [[w _] (world/update-world (quaff-world 3 #{}) 0 {:action/type :world/quaff :item-id 7})]
+  (let [[w _] (actions/perform (quaff-world 3 #{}) 0 {:action/type :world/quaff :item-id 7})]
     (is (= 2 (:item/quantity (first (world/player-inventory w)))))))
 
 (deftest quaffing-the-last-potion-removes-the-stack
-  (let [[w _] (world/update-world (quaff-world 1 #{}) 0 {:action/type :world/quaff :item-id 7})]
+  (let [[w _] (actions/perform (quaff-world 1 #{}) 0 {:action/type :world/quaff :item-id 7})]
     (is (empty? (world/player-inventory w)))))
 
 (deftest quaffing-identifies-the-kind
-  (let [[w [event]] (world/update-world (quaff-world 2 #{}) 0 {:action/type :world/quaff :item-id 7})]
+  (let [[w [event]] (actions/perform (quaff-world 2 #{}) 0 {:action/type :world/quaff :item-id 7})]
     (is (world/known-item? w :potion/harm))
     (is (= :world/quaffed (:event/type event)))
     (is (:learned? event))
     (is (= 2 (:item/quantity (:item event))) "the event shows the stack as it was before drinking")))
 
 (deftest quaffing-a-known-potion-learns-nothing-new
-  (let [[_ [event]] (world/update-world (quaff-world 2 #{:potion/harm}) 0 {:action/type :world/quaff :item-id 7})]
+  (let [[_ [event]] (actions/perform (quaff-world 2 #{:potion/harm}) 0 {:action/type :world/quaff :item-id 7})]
     (is (false? (:learned? event)))))
 
 ;;; Effects
@@ -253,7 +262,7 @@
 
 (deftest quaffing-applies-the-potions-effects-after-the-quaffed-event
   (let [w (assoc-in (quaff-world 1 #{} [{:effect/type :damage :dice 1 :sides 1}]) [:player :hp/current] 10)
-        [w events] (world/update-world w 0 {:action/type :world/quaff :item-id 7})]
+        [w events] (actions/perform w 0 {:action/type :world/quaff :item-id 7})]
     (is (= [:world/quaffed :world/damaged] (map :event/type events)))
     (is (= 9 (player-hp w)))))
 
@@ -262,12 +271,12 @@
               (update-in [:player :inventory] conj {:item/kind :edged/dagger :item/id 8 :item/quantity 1
                                                     :item/category :edged})
               (assoc-in [:player :inventory 0 :item/category] :potion))
-        [_ [event]] (world/update-world w 0 {:action/type :world/quaff :item-id 7})]
+        [_ [event]] (actions/perform w 0 {:action/type :world/quaff :item-id 7})]
     (is (= \a (:label event)))))
 
 (deftest quaffed-event-keeps-the-letter-when-none-are-left
   (let [w (assoc-in (quaff-world 1 #{}) [:player :inventory 0 :item/category] :potion)
-        [_ [event]] (world/update-world w 0 {:action/type :world/quaff :item-id 7})]
+        [_ [event]] (actions/perform w 0 {:action/type :world/quaff :item-id 7})]
     (is (= \a (:label event)))))
 
 ;;; Teleport
@@ -309,7 +318,7 @@
 (defn- wield
   ([w item-id] (wield w item-id nil))
   ([w item-id slot]
-   (world/update-world w 0 {:action/type :world/wield :item-id item-id :slot slot})))
+   (actions/perform w 0 {:action/type :world/wield :item-id item-id :slot slot})))
 
 (deftest wielding-moves-the-item-from-pack-to-equipment
   (let [[w [event]] (wield (gear-world [dagger] {}) 1)]
@@ -342,8 +351,8 @@
                (wield (gear-world [(assoc dagger :item/id 4)] {:main-hand dagger :off-hand club}) 4))))
 
 (deftest taking-off-returns-the-item-to-the-pack
-  (let [[w [event]] (world/update-world (gear-world [] {:main-hand dagger}) 0
-                                        {:action/type :world/take-off :slot :main-hand})]
+  (let [[w [event]] (actions/perform (gear-world [] {:main-hand dagger}) 0
+                                     {:action/type :world/take-off :slot :main-hand})]
     (is (= {} (world/player-equipment w)))
     (is (= [dagger] (world/player-inventory w)))
     (is (= {:event/type :world/took-off :item dagger :slot :main-hand}

@@ -1,5 +1,6 @@
 (ns roguelike.scheduler-test
   (:require [clojure.test :refer [deftest is testing]]
+            [roguelike.actions :as actions]
             [roguelike.scheduler :as scheduler]
             [roguelike.level :as level]
             [roguelike.world :as world]
@@ -32,10 +33,10 @@
      :rng-state        (rng/make 42)
      :next-entity-id   (inc (apply max 0 (map :entity/id monsters)))}))
 
-;;; cost-of
+;;; actions/cost
 
 (deftest cost-of-unknown-action-throws
-  (is (thrown? clojure.lang.ExceptionInfo (#'scheduler/cost-of {:action/type :bogus}))))
+  (is (thrown? clojure.lang.ExceptionInfo (actions/cost {:action/type :bogus}))))
 
 ;;; reschedule
 
