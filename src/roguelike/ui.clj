@@ -159,6 +159,8 @@
   [{:keys [item known]} flavors]
   (were-message item flavors known))
 
+(def ^:private silent-events #{:world/moved :world/teleported})
+
 ;; what is an event?
 ;; proposed shape:
 ;; :event/type -> the event type
@@ -221,7 +223,9 @@
     (add-message ui "You feel very sick.")
 
     ;; default case
-    ui))
+    (if (silent-events (:event/type event))
+      ui
+      (add-message ui (str "[no message for " (:event/type event) "]")))))
 
 (defn apply-events
   [ui events flavors]

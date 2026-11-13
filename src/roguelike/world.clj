@@ -36,11 +36,11 @@
   [world id]
   (assoc world :current-level-id id))
 
-(defn- next-level-id
+(defn next-level-id
   [world]
   (inc (current-level-id world)))
 
-(defn- previous-level-id
+(defn previous-level-id
   [world]
   (dec (current-level-id world)))
 
@@ -62,6 +62,10 @@
   [world]
   (level/all-items (current-level world)))
 
+(defn items-at
+  [world pos]
+  (level/items-at (current-level world) pos))
+
 ;; Time
 
 (defn- current-time
@@ -78,7 +82,7 @@
 
 ;; World Construction
 
-(defn- allocate-entity-id
+(defn allocate-entity-id
   [world]
   (let [next-entity-id (:next-entity-id world)]
     ;; this when branch should not be possible to reach, it's a "just in case" safety net
@@ -277,7 +281,7 @@
   (let [player (player-entity world)]
     (contains? (get-in player [:knowledge :item/known]) item-kind)))
 
-(defn- learn-item-kind
+(defn learn-item-kind
   "Marks an item kind as identified. Knowledge is per kind, so every item of
   that kind is known from now on."
   [world item-kind]
@@ -382,7 +386,7 @@
                                     #(assoc % :hp/current new-hp))]
             [world (assoc attack-result :event/type :world/hit)]))))))
 
-(defn- apply-attacks
+(defn apply-attacks
   [world attacks attacker defender]
   (let [reducer (fn
                   [[world events] attack]
@@ -391,19 +395,8 @@
                     [world (conj events event)]))]
     (reduce reducer [world []] attacks)))
 
-(defn- attempt-attack
-  [world actor-id new-pos]
-  (let [attacker (get-actor world actor-id)
-        defender (entity-at world new-pos)]
-    (if (and (not (player? world actor-id))
-             (not (player? world (:entity/id defender))))
-      [world [{:event/type :world/blocked :by :actor :player? false}]]
-      (let [atk-profile (combat/attacker-profile attacker)
-            def-profile (combat/defender-profile defender)
-            [world resolved] (combat/resolve-attacks world atk-profile def-profile) ]
-        (apply-attacks world resolved attacker defender)))))
 
-(defn- observed-items
+(defn observed-items
   [world items]
   (let [known (->> items
                    (map :item/kind)
@@ -413,32 +406,7 @@
      :items items
      :known (set known)}))
 
-(defn attempt-movement
-  [world actor-id delta]
-  (let [new-pos (get-proposed-coords world actor-id delta)
-        destination (classify-destination world new-pos)
-        player? (player? world actor-id)]
-    (cond
-      ;; TODO: here, I think I need to add some kind of a flag to show whether
-      ;; player is on items or not. If the player is moving onto items, then we
-      ;; need to display a message (ie. "You see a <whatever> here."). Probably
-      ;; something like :items? on the event so the ui knows whether to add a
-      ;; message or proceed as normal
-      (= destination :passable)
-      (let [new-world (move-actor world actor-id new-pos)
-            move-event {:event/type
-                        :world/moved
-                        :player? player?}
-            items (level/items-at (current-level world) new-pos)]
-        (if (and player? items)
-          [new-world [move-event (observed-items world items)]]
-          [new-world [move-event]]))
-      
-      (= destination :actor)
-      (attempt-attack world actor-id new-pos)
 
-      :else
-      [world [{:event/type :world/blocked :by destination :player? player?}]])))
 
 (defn- change-current-level
   [world id lvl]
@@ -466,7 +434,7 @@
                 (sight-radius world (player-id world)))]
       (populate-level world lvl id seen))))
 
-(defn- travel
+(defn travel
   [world target-lvl-id arrival-stair-kind]
   (let [[world target-lvl] (load-or-generate world target-lvl-id arrival-stair-kind)]
     (-> world
@@ -476,21 +444,6 @@
         (move-actor (player-id world) (level/stair-pos target-lvl arrival-stair-kind))
         (observe))))
 
-(defn descend
-  [world]
-  (let [next-lvl-id (next-level-id world)
-        new-world (travel world next-lvl-id :stairs/up)]
-    [new-world [{:event/type :world/travelled
-                 :direction  :down
-                 :depth      (inc next-lvl-id)}]]))
-
-(defn ascend
-  [world]
-  (let [prev-lvl-id (previous-level-id world)
-        new-world (travel world prev-lvl-id :stairs/down)]
-    [new-world [{:event/type :world/travelled
-                 :direction  :up
-                 :depth      (inc prev-lvl-id)}]]))
 
 (defn- on-stairs-down?
   [world]
@@ -500,7 +453,7 @@
   [world]
   (level/on-stairs-up? (current-level world) (player-pos world)))
 
-(defn- heal-player
+(defn heal-player
   [world]
   (update-actor world (player-id world)
                 (fn [player]
@@ -549,145 +502,13 @@
         [(resolve-death world victim)
          [damaged {:event/type :world/killed :defender victim}]]))))
 
-(defn- apply-effects
+(defn apply-effects
   [world actor-id effects]
   (reduce (fn [[world events] effect]
             (let [[world new-events] (apply-effect world actor-id effect)]
               [world (into events new-events)]))
           [world []]
           effects))
-
-(defn- pack-label
-  "The letter the item with this id has in the player's pack, or nil."
-  [world item-id]
-  (some #(when (= item-id (:item/id (:item %))) (:label %)) (player-pack world)))
-
-;; TODO: this function currently emits one event that carries only the first
-;; item that was picked up. This is fine if the player picks up a single item,
-;; or a stack of the same item, but it loses info if there are multiple items
-;; picked up. Say the player picks up 2 potions and a dagger. This function only
-;; carries the first item picked up, so we only send one message. I want to
-;; refactor this eventually to emit messages for all the items, but this is part
-;; of a larger refactor of the message log.
-(defn- attempt-pickup
-  [world actor-id]
-  (let [current-pos (:pos (get-actor world actor-id))
-        items (level/items-at (current-level world) current-pos)]
-    (if (seq items)
-      (let [new-world (-> world
-                          (update-player-inventory items)
-                          (update-current-level #(level/remove-items % current-pos)))
-            new-item (inventory/find-item (player-inventory new-world) (first items))]
-        [new-world [{:event/type :world/picked-up :item new-item :known (known-items world)}]])
-      [world [{:event/type :world/pickup-failed :reason :no-item}]])))
-
-;; TODO: currently, if we drop an item, and then we drop another of the exact
-;; same item, the ui only shows 1 of the items when the player stands on the
-;; stack. When the player 'g'ets the stack, both get picked up, but it's a small
-;; inconsistency. I should fix this later.
-(defn- drop-item
-  "Drops quantity items from the stack with the given id onto the floor under
-  the actor. Dropping part of a stack splits it off as a new item with its own
-  id. The :world/dropped event carries the item as it landed on the floor."
-  [world actor-id item-id quantity]
-  (let [current-pos (:pos (get-actor world actor-id))
-        item (inventory/find-item-by-id (player-inventory world) item-id)
-        [dropped world] (if (< quantity (:item/quantity item))
-                          (let [[id world] (allocate-entity-id world)]
-                            [(assoc item :item/id id :item/quantity quantity) world])
-                          [item world])
-        dropped (assoc dropped :item/pos current-pos)
-        world (-> world
-                  (update-actor (player-id world) #(update % :inventory inventory/remove-quantity item-id quantity))
-                  (update-current-level #(level/add-item % current-pos dropped)))]
-    [world [{:event/type :world/dropped :item dropped :known (known-items world)}]]))
-
-(defn- use-item
-  "The player uses one item from the stack with the given id. The item is used
-  up, its kind becomes known, and its effects are applied. The :world/<verb>
-  event carries the item as it was before using, whether this use identified it,
-  and the stack's letter (where it sits now, or where it was if none are left);
-  effect events follow it."
-  [world item-id event-type]
-  (let [item (inventory/find-item-by-id (player-inventory world) item-id)]
-    (when (nil? item)
-      (throw (ex-info "no item with that id in the player's inventory" {:item/id item-id})))
-    (let [kind (:item/kind item)
-          learned? (not (known-item? world kind))
-          label-before (pack-label world item-id)
-          world (-> world
-                    (update-actor (player-id world) #(update % :inventory inventory/remove-one item-id))
-                    (learn-item-kind kind))
-          label (or (pack-label world item-id) label-before)
-          [world effect-events] (apply-effects world (player-id world) (:item/effects item))]
-      [world (into [{:event/type event-type :item item :learned? learned? :label label}]
-                   effect-events)])))
-
-(defn- wield-item
-  "The player wields or wears the item with the given id. It leaves the pack
-  and goes into slot, or into the slot equipment/slot-for picks when slot is
-  nil. Anything it displaces goes back into the pack. A one-handed weapon with
-  both hands full is ambiguous, so the caller is required to pass a slot.
-  The :world/wielded event carries the item, its slot, and the displaced items."
-  [world item-id slot]
-  (let [item (inventory/find-item-by-id (player-inventory world) item-id)]
-    (when (nil? item)
-      (throw (ex-info "no item with that id in the player's inventory" {:item/id item-id})))
-    (let [slot (or slot (equipment/slot-for (player-equipment world) item))]
-      (when (= :ambiguous slot)
-        (throw (ex-info "both hands are full; the slot must be chosen" {:item/id item-id})))
-      (let [[equipment displaced] (equipment/equip (player-equipment world) item slot)
-            world (update-actor world (player-id world)
-                                #(-> %
-                                     (assoc :equipment equipment)
-                                     (update :inventory inventory/remove-stack item-id)
-                                     (update :inventory inventory/add-items displaced)))]
-        [world [{:event/type :world/wielded :item item :slot slot
-                 :removed displaced :known (known-items world)}]]))))
-
-(defn- take-off
-  "The player takes off whatever is in slot and puts it back in the pack. The
-  :world/took-off event carries the item and the slot it came from."
-  [world slot]
-  (let [[equipment item] (equipment/unequip (player-equipment world) slot)]
-    (when (nil? item)
-      (throw (ex-info "nothing is equipped in that slot" {:slot slot})))
-    [(update-actor world (player-id world)
-                   #(-> %
-                        (assoc :equipment equipment)
-                        (update :inventory inventory/add-item item)))
-     [{:event/type :world/took-off :item item :slot slot :known (known-items world)}]]))
-
-(defn update-world
-  [world actor-id action]
-  (case (:action/type action)
-    :world/descend (if (on-stairs-down? world)
-                     (descend world)
-                     [world [{:event/type :world/invalid-action :action :stairs-down}]])
-
-    :world/ascend (if (on-stairs-up? world)
-                    (ascend world)
-                    [world [{:event/type :world/invalid-action :action :stairs-up}]])
-
-    :world/move (attempt-movement world actor-id (:delta action))
-
-    :world/wait (let [world (if (player? world actor-id) (heal-player world) world)]
-                  [world [{:event/type :world/wait}]])
-
-    :world/get (attempt-pickup world actor-id)
-
-    :world/drop (drop-item world actor-id (:item-id action) (:quantity action))
-
-    :world/quaff (use-item world (:item-id action) :world/quaffed)
-
-    :world/read (use-item world (:item-id action) :world/read-scroll)
-
-    :world/wield (wield-item world (:item-id action) (:slot action))
-
-    :world/take-off (take-off world (:slot action))
-
-    ;; default: throw an exception, because getting here is a mistake that shouldn't happen
-    (throw (ex-info "unknown action type" {:action action}))))
 
 ;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
 ;; this is so I don't have to move the player in and out of the lists for the different levels.

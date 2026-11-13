@@ -65,42 +65,39 @@
        :empty     "You are not wearing or wielding anything."
        :on-select {:action/type :world/take-off}}})
 
+(def ^:private play-keys
+  {\h {:action/type :world/move :delta [-1 0]}
+   \j {:action/type :world/move :delta [0 1]}
+   \k {:action/type :world/move :delta [0 -1]}
+   \l {:action/type :world/move :delta [1 0]}
+   \y {:action/type :world/move :delta [-1 -1]}
+   \u {:action/type :world/move :delta [1 -1]}
+   \b {:action/type :world/move :delta [-1 1]}
+   \n {:action/type :world/move :delta [1 1]}
+   \. {:action/type :world/wait}
+   \> {:action/type :world/descend}
+   \< {:action/type :world/ascend}
+   \g {:action/type :world/get}})
+
 (defn play-mode
   "Play mode input handler. When the world is in :play mode, it reads movement
    keys and other commands and then returns a command type depending on the
    input."
   [key-event]
-  (cond
-    (and (:ctrl? key-event) (= (:key key-event) \x))
-    {:action/type :ui/prompt
-     :message "Really quit? (y to confirm, any other key to cancel)"
-     :on-yes {:action/type :ui/quit}}
+  (let [k (:key key-event)]
+    (cond
+      (and (:ctrl? key-event) (= k \x))
+      {:action/type :ui/prompt
+       :message "Really quit? (y to confirm, any other key to cancel)"
+       :on-yes {:action/type :ui/quit}}
 
-    ;; actions (inventory, quaff, read, etc.)
-    (contains? item-pickers (:key key-event))
-    (assoc (item-pickers (:key key-event)) :action/type :ui/item-select)
+      (contains? item-pickers k)
+      (assoc (item-pickers k) :action/type :ui/item-select)
 
-    (contains? equipment-pickers (:key key-event))
-    (assoc (equipment-pickers (:key key-event)) :action/type :ui/equipment-select)
+      (contains? equipment-pickers k)
+      (assoc (equipment-pickers k) :action/type :ui/equipment-select)
 
-    (= (:key key-event) \g) {:action/type :world/get}
-
-    ;; movement
-    (= (:key key-event) \h) {:action/type :world/move :delta [-1 0]}
-    (= (:key key-event) \y) {:action/type :world/move :delta [-1 -1]}
-    (= (:key key-event) \b) {:action/type :world/move :delta [-1 1]}
-    (= (:key key-event) \n) {:action/type :world/move :delta [1 1]}
-    (= (:key key-event) \u) {:action/type :world/move :delta [1 -1]}
-    (= (:key key-event) \l) {:action/type :world/move :delta [1 0]}
-    (= (:key key-event) \j) {:action/type :world/move :delta [0 1]}
-    (= (:key key-event) \k) {:action/type :world/move :delta [0 -1]}
-
-    ;; travel/wait/etc
-    (= (:key key-event) \.) {:action/type :world/wait}
-    (= (:key key-event) \>) {:action/type :world/descend}
-    (= (:key key-event) \<) {:action/type :world/ascend}
-
-    :else {:action/type :ui/none}))
+      :else (get play-keys k {:action/type :ui/none}))))
 
 (defn prompt-mode
   "Prompt mode input handler. When the world is in :prompt mode, it reads the

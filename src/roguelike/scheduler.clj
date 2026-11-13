@@ -1,21 +1,7 @@
 (ns roguelike.scheduler
-  (:require [roguelike.ai :as ai]
+  (:require [roguelike.actions :as actions]
+            [roguelike.ai :as ai]
             [roguelike.world :as world]))
-
-(defn- cost-of
-  [action]
-  (case (:action/type action)
-    :world/ascend 10
-    :world/descend 10
-    :world/drop 5
-    :world/get 5
-    :world/move 10
-    :world/quaff 10
-    :world/read 10
-    :world/take-off 5
-    :world/wait 10
-    :world/wield 5
-    (throw (ex-info "this action doesn't exist" {:action action}))))
 
 (defn- reschedule
   [world actor-id cost]
@@ -23,8 +9,8 @@
 
 (defn resolve-action
   [world actor-id action]
-  (let [[world events] (world/update-world world actor-id action)
-        rescheduled-world (cond-> (reschedule world actor-id (cost-of action))
+  (let [[world events] (actions/perform world actor-id action)
+        rescheduled-world (cond-> (reschedule world actor-id (actions/cost action))
                             (world/player? world actor-id) world/observe)]
     [rescheduled-world events]))
 
