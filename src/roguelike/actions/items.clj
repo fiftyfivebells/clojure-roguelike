@@ -1,5 +1,6 @@
 (ns roguelike.actions.items
-  (:require [roguelike.inventory :as inventory]
+  (:require [roguelike.effects :as effects]
+            [roguelike.inventory :as inventory]
             [roguelike.level :as level]
             [roguelike.world :as world]))
 
@@ -67,7 +68,7 @@
                     (world/update-actor (world/player-id world) #(update % :inventory inventory/remove-one item-id))
                     (world/learn-item-kind kind))
           label (or (pack-label world item-id) label-before)
-          [world effect-events] (world/apply-effects world (world/player-id world) (:item/effects item))]
+          [world effect-events] (effects/apply-effects world (world/player-id world) (:item/effects item))]
       [world (into [{:event/type event-type :item item :learned? learned? :label label}]
                    effect-events)])))
 

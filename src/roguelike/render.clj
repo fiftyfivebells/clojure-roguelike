@@ -1,11 +1,12 @@
 (ns roguelike.render
-  (:require [roguelike.world :as world]
-            [roguelike.ui.equipment-select :as equipment-select]
+  (:require [roguelike.ui.equipment-select :as equipment-select]
             [roguelike.ui.item-select :as item-select]
             [roguelike.ui.number-select :as number-select]
             [roguelike.ui.appearance :as appearance]
             [roguelike.ui.appearance.item :as item]
-            [roguelike.ui :as ui])
+            [roguelike.ui :as ui]
+            [roguelike.view :as view]
+            [roguelike.world :as world])
   (:import [com.googlecode.lanterna TextColor$ANSI TextColor$RGB]))
 
 ;; TODO: will probably need to untangle this at some point. I've got two things
@@ -83,7 +84,7 @@
 
 (defn draw-level
   [tg world origin [vw vh] start-row start-col]
-  (let [view (into {} (map (juxt :pos identity)) (world/level-view world origin [vw vh]))]
+  (let [view (into {} (map (juxt :pos identity)) (view/level-view world origin [vw vh]))]
     (doseq [sy (range vh)
             sx (range vw)]
       (let [tile (view (mapv + origin [sx sy]))
@@ -94,7 +95,7 @@
 
 (defn draw-items
   [tg world origin [vw vh] start-row start-col]
-  (doseq [item (world/visible-items world)]
+  (doseq [item (view/visible-items world)]
     (let [[sx sy] (mapv world->screen (:item/pos item) origin)]
       (when (and (< -1 sx vw) (< -1 sy vh))
         (let [glyph (item/glyph-of (:item/kind item))
@@ -104,7 +105,7 @@
 
 (defn draw-actors
   [tg world origin [vw vh] start-row start-col]
-  (doseq [entity (world/visible-actors world)]
+  (doseq [entity (view/visible-actors world)]
     (let [[sx sy] (mapv world->screen (:pos entity) origin)]
       (when (and (< -1 sx vw) (< -1 sy vh))
         (let [glyph (appearance/entity->glyph entity)
@@ -124,7 +125,7 @@
   [tg world layout]
   (let [start-row (:play-start-row layout)
         width (dec (:play-start-col layout))
-        {:keys [current-hp max-hp level]} (world/status world)]
+        {:keys [current-hp max-hp level]} (view/status world)]
     (.setForegroundColor tg (style->color :bright))
     (draw-stat-line tg start-row width "HP" (str current-hp "/" max-hp))
     (draw-stat-line tg (inc start-row) width "Depth" (inc level))))
@@ -163,7 +164,7 @@
   (let [world (:world game)
         ui    (:ui    game)
         dimensions (screen-dimensions screen)
-        level-size (world/current-level-dimensions world)
+        level-size (view/current-level-dimensions world)
         layout (calculate-layout dimensions)
         tg (.newTextGraphics screen)
         origin (camera-origin (world/player-pos world) (:viewport layout) level-size)]

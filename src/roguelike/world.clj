@@ -1,9 +1,5 @@
 (ns roguelike.world
-  (:require [clojure.set :as set]
-            [roguelike.combat :as combat]
-            [roguelike.equipment :as equipment]
-            [roguelike.fov :as fov]
-            [roguelike.inventory :as inventory]
+  (:require [roguelike.inventory :as inventory]
             [roguelike.item :as item]
             [roguelike.item.flavor :as flavor]
             [roguelike.item.spawn :as item-spawn]
@@ -17,7 +13,7 @@
 
 ;; Levels
 
-(defn- level-at
+(defn level-at
   "Takes a world and id and returns the level associated with that id. This is
    intentionally allowed to return nil, so that callers can use the nil as a
    signal that a new level should be created using the provided id."
@@ -36,14 +32,6 @@
   [world id]
   (assoc world :current-level-id id))
 
-(defn next-level-id
-  [world]
-  (inc (current-level-id world)))
-
-(defn previous-level-id
-  [world]
-  (dec (current-level-id world)))
-
 (defn current-level
   "Returns the currently active level of the world."
   [world]
@@ -54,10 +42,6 @@
   (let [id (current-level-id world)]
     (put-level world id (f (level-at world id)))))
 
-(defn current-level-dimensions
-  [world]
-  (level/dimensions (current-level world)))
-
 (defn current-level-items
   [world]
   (level/all-items (current-level world)))
@@ -66,13 +50,19 @@
   [world pos]
   (level/items-at (current-level world) pos))
 
+(defn change-current-level
+  [world id lvl]
+  (-> world
+      (set-current-level-id id)
+      (put-level id lvl)))
+
 ;; Time
 
 (defn- current-time
   [world]
   (:current-time world))
 
-(defn- rebase-monster-clocks
+(defn rebase-monster-clocks
   [world]
   (update-current-level
    world
@@ -91,7 +81,7 @@
 
     [next-entity-id (update world :next-entity-id inc)]))
 
-(defn- populate-level
+(defn populate-level
   "Spawns this level's monsters into lvl, giving each one an id from the world's
    counter and a clock set to now. Reserved positions are left empty so the
    player never lands on top of a monster. The spawn rng is left on the level so
@@ -114,10 +104,6 @@
     [world (level/set-rng-state lvl (:rng-state ctx))]))
 
 ;; Actors
-
-(defn entity-type
-  [entity]
-  (:entity/type entity))
 
 (defn player-entity
   [world]
@@ -188,6 +174,18 @@
                 (fn [p]
                   (update p :inventory inventory/add-items items))))
 
+(defn set-current-level-departed-at
+  [world]
+  (update-current-level world #(level/set-departed-at % (current-time world))))
+
+(defn on-stairs-down?
+  [world]
+  (level/on-stairs-down? (current-level world) (player-pos world)))
+
+(defn on-stairs-up?
+  [world]
+  (level/on-stairs-up? (current-level world) (player-pos world)))
+
 ;; Tiles
 
 (defn tile-at
@@ -205,30 +203,6 @@
   (let [actor (get-actor world actor-id)]
     (:sight/radius actor)))
 
-(defn- max-scan-radius
-  "A radius big enough that a shadowcast from any point reaches every corner
-   of the level, used to find line-of-sight into lit rooms regardless of
-   torch radius."
-  [level]
-  (let [[w h] (level/dimensions level)]
-    (long (Math/ceil (Math/sqrt (+ (* w w) (* h h)))))))
-
-;; (defn visible-cells
-;;   "Takes a world and sight-radius and returns a set of tiles visible from the
-;;    actor: everything within torch radius, plus anything in line-of-sight that
-;;    belongs to a currently-lit room (see level/lit-tiles)."
-;;   [world actor-id radius]
-;;   (let [level (current-level world)
-;;         opaque? (partial level/opaque-at? level)
-;;         actor-pos (:pos (get-actor world actor-id))
-;;         torch (fov/visible-cells opaque? actor-pos radius)
-;;         lit (level/lit-tiles level)]
-;;     (if (empty? lit)
-;;       torch
-;;       (set/union torch
-;;                  (set/intersection (fov/visible-cells opaque? actor-pos (max-scan-radius level))
-;;                                     lit)))))
-
 (defn visible-cells
   [world]
   (get-in world [:vision :visible]))
@@ -242,24 +216,8 @@
         (assoc :vision v)
         (update-current-level #(level/remember-visible % (:visible v))))))
 
-;; (defn can-see?
-;;   [world from-id to-pos]
-;;   (let [radius (sight-radius world from-id)
-;;         opaque? (partial level/opaque-at? (current-level world))
-;;         visible (visible-cells world from-id radius)]
-;;     (contains? visible to-pos)))
 
-(defn visible-actors
-  "Gets a list of active entities in the current level whose position is currently visible to the
-  player (per FOV), so monsters outside the player's sight radius don't render."
-  [world]
-  (let [visible (visible-cells world)]
-    (filter #(contains? visible (:pos %)) (active-actors world))))
-
-(defn visible-items
-  [world]
-  (let [visible (visible-cells world)]
-    (filter #(contains? visible (:item/pos %)) (current-level-items world))))
+;; Knowledge
 
 (defn flavors
   "Returns the flavors rolled for this world (e.g., which potion is 'bubbling')."
@@ -288,37 +246,6 @@
   (update-actor world (player-id world)
                 #(update-in % [:knowledge :item/known] conj item-kind)))
 
-(defn tile-classifier
-  ([world]
-   (let [visible (visible-cells world)
-         curr-lvl (current-level world)
-         known   (level/known-tiles curr-lvl)]
-     (fn [tile]
-       (let [pos (:pos tile)]
-         (cond
-           (contains? visible pos)
-           {:pos pos
-            :state :visible
-            :tile (level/classify-tile (level/tile-at curr-lvl pos))}
-
-           (knowledge/seen? known pos)
-           {:pos pos
-            :state :remembered
-            :tile (level/classify-tile (knowledge/remembered-tile known pos))}
-
-           :else
-           {:pos pos
-            :state :unknown
-            :tile :unknown}))))))
-
-(defn level-view
-  ([world]
-   (map (tile-classifier world) (level/level->tile-list (current-level world))))
-  ([world origin [vw-max vh-max]]
-   (map (tile-classifier world)
-        (level/level->tile-list
-         (current-level world) origin [vw-max vh-max]))))
-
 ;; Movement
 
 (defn walkable-at?
@@ -330,6 +257,8 @@
   glyph at the new coordinates."
   [world actor-id [x y]]
   (update-actor world actor-id #(assoc % :pos [x y])))
+
+;; Effects
 
 (defn describe
   [world entity]
@@ -343,101 +272,6 @@
     (update-actor world (player-id world) #(assoc % :hp/current 0 :dead? true))
     (update-current-level world #(level/remove-entity % (:id defender)))))
 
-(defn- change-current-level
-  [world id lvl]
-  (-> world
-      (set-current-level-id id)
-      (put-level id lvl)))
-
-(defn- set-current-level-departed-at
-  [world]
-  (update-current-level world #(level/set-departed-at % (current-time world))))
-
-(defn- load-or-generate
-  "Returns [world lvl]. Levels already visited stay in :levels, so generating
-   and populating only happen on first arrival. When generating, this function
-   avoids spawning monsters within sight of the player's arrival location."
-  [world id arrival-stair-kind]
-  (if-let [lvl (level-at world id)]
-    [world lvl]
-    (let [lvl (dungeon/generate (:world-seed world) id)
-          arrival-stairs (level/stair-pos lvl arrival-stair-kind)
-          opaque? (partial level/opaque-at? lvl)
-          seen (fov/visible-cells
-                opaque?
-                arrival-stairs
-                (sight-radius world (player-id world)))]
-      (populate-level world lvl id seen))))
-
-(defn travel
-  [world target-lvl-id arrival-stair-kind]
-  (let [[world target-lvl] (load-or-generate world target-lvl-id arrival-stair-kind)]
-    (-> world
-        (set-current-level-departed-at)
-        (change-current-level target-lvl-id target-lvl)
-        (rebase-monster-clocks)
-        (move-actor (player-id world) (level/stair-pos target-lvl arrival-stair-kind))
-        (observe))))
-
-
-(defn on-stairs-down?
-  [world]
-  (level/on-stairs-down? (current-level world) (player-pos world)))
-
-(defn on-stairs-up?
-  [world]
-  (level/on-stairs-up? (current-level world) (player-pos world)))
-
-;; Item effects
-
-(defmulti apply-effect
-  "Applies one item effect to an actor. Effects are data in the item catalog,
-  like {:effect/type :heal :dice 2 :sides 4}; this interprets them.
-  Returns [world events]."
-  (fn [_world _actor-id effect] (:effect/type effect)))
-
-(defmethod apply-effect :heal
-  [world actor-id effect]
-  (let [[world amount] (rng/roll-dice world effect)
-        world (update-actor world actor-id
-                            (fn [actor]
-                              (update actor :hp/current #(min (:hp/max actor) (+ % amount)))))]
-    [world [{:event/type :world/healed :amount amount}]]))
-
-(defmethod apply-effect :teleport
-  ;; Rolls a distance from the effect's dice, then lands on a random open
-  ;; square whose distance from the start is as close to that roll as the
-  ;; level allows.
-  [world actor-id effect]
-  (let [start (:pos (get-actor world actor-id))
-        [world distance] (rng/roll-dice world effect)
-        off-by #(abs (- distance (Math/round (Math/sqrt (dungeon/distance-sq start %)))))
-        ;; the player isn't in the level's entities, so we claim the start square
-        spots (spawn/open-positions (current-level world) #{start})
-        best (apply min (map off-by spots))
-        [world dest] (rng/draw-any world (filterv #(= best (off-by %)) spots))]
-    [(move-actor world actor-id dest)
-     [{:event/type :world/teleported :from start :to dest}]]))
-
-(defmethod apply-effect :damage
-  [world actor-id effect]
-  (let [[world amount] (rng/roll-dice world effect)
-        actor (get-actor world actor-id)
-        hp (- (:hp/current actor) amount)
-        damaged {:event/type :world/damaged :amount amount}]
-    (if (pos? hp)
-      [(update-actor world actor-id #(assoc % :hp/current hp)) [damaged]]
-      (let [victim (describe world actor)]
-        [(resolve-death world victim)
-         [damaged {:event/type :world/killed :defender victim}]]))))
-
-(defn apply-effects
-  [world actor-id effects]
-  (reduce (fn [[world events] effect]
-            (let [[world new-events] (apply-effect world actor-id effect)]
-              [world (into events new-events)]))
-          [world []]
-          effects))
 
 ;; the player is intentionally NOT in the per-level entity map, and is instead a global concept.
 ;; this is so I don't have to move the player in and out of the lists for the different levels.
@@ -462,9 +296,4 @@
          (put-level 0 first-dungeon)
          (observe)))))
 
-(defn status
-  "Gives some helpful info about the current world. Used for UI display info."
-  [world]
-  {:current-hp (get-in world [:player :hp/current])
-   :max-hp     (get-in world [:player :hp/max])
-   :level      (current-level-id world)})
+
