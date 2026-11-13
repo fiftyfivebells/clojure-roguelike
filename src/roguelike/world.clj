@@ -28,7 +28,7 @@
   [world id lvl]
   (assoc-in world [:levels id] lvl))
 
-(defn- current-level-id
+(defn current-level-id
   [world]
   (:current-level-id world))
 

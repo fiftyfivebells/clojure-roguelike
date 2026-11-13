@@ -19,7 +19,7 @@
 
 (defn- chase-map
   [world]
-  (let [k [(world/current-level world) (world/player-pos world)]
+  (let [k [(world/current-level-id world) (world/player-pos world)]
         cached (:chase-map world)]
     (if (= k (:key cached))
       [world (:field cached)]
